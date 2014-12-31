@@ -1,0 +1,75 @@
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.cell {
+    float: left;
+    text-align: center;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    color: #BCBCBC;
+}
+
+.days {
+    height: 30px;
+    border-bottom: 1px solid #E0E0E0;
+    border-top: 1px solid #E0E0E0;
+}
+
+.date-panel {
+   border: 1px solid #E0E0E0;
+   width: 210px;
+   .noselect;
+}
+
+.month-panel {
+   width: 210px;
+   height: 30px;
+   line-height: 30px;
+   .noselect;
+}
+
+.month-panel div {
+   display: inline-block;
+}
+
+.month-panel .control {
+   width: 30px;
+   text-align: center;
+   cursor: pointer;
+}
+
+.month-panel .label {
+   width: 150px;
+   text-align: center;
+}
+
+.cell.instant, .days > .cell {
+    color: #333;
+}
+
+.days > .cell {
+    background-color: #F0F0F0;
+}
+
+.week {
+    width: 210px;
+    height: 30px;
+}
+
+.week > .cell.highlighted {
+    color: #FFFFFF;
+    background-color: #AAA;
+    cursor: pointer;
+}
+
+.weekend {
+    background-color: #F0F0F0;
+}
+
