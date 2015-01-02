@@ -52,8 +52,26 @@
         (om/update! cursor [:value] new-value)))))
 
 (defn monthpicker-panel
-  ;; TODO: allow-past? end-date
-  [cursor owner {:keys [allow-past? end-date value-ch result-ch value] :or {allow-past? true value (d/current-month)}}]
+  "Creates a month-picker panel component.
+
+   opts - a map of options. The following keys are supported:
+
+     :allow-past? - if false, switching to the month in the past is not allowed
+     :end-date    - if set, moving forward is limited by that date
+     :value-ch    - if set, the picker value are updated with the values from that channel
+     :result-ch   - if passed, then values are put in that channel instead of :value key of the cursor
+     :value       - initial value, used when there is no value in :value cursor
+
+   Example:
+
+     (om/build monthpicker-panel app
+            {:opts {:allow-past? false
+                    :end-date    ...
+                    :result-ch   ...}})
+  "
+  [cursor owner {:keys [allow-past? end-date value-ch result-ch value]
+                 :or   {allow-past? true value (d/current-month)}
+                 :as   opts}]
   (reify
     om/IInitState
     (init-state [_]
@@ -81,13 +99,19 @@
     
     om/IRenderState
     (render-state [_ {:keys [value result-ch]}]
-      (let [value (or (:value cursor) value)]
+      (let [value           (or (:value cursor) value)
+            can-go-back?    (or allow-past? (d/is-future? value))
+            can-go-forward? (or (nil? end-date) (<= value end-date))]
         (dom/div #js {:className "month-panel"}
-                 (dom/div #js {:className "control left"
-                               :onClick   #(monthpicker-change-month cursor owner d/previous-month result-ch)} "←")
+                 (dom/div #js {:className (str "control left" (when-not can-go-back? " disabled"))
+                               :onClick   (when can-go-back?
+                                            #(monthpicker-change-month cursor owner d/previous-month result-ch))} "")
                  (dom/div #js {:className "label"} (month-panel-label value))
-                 (dom/div #js {:className "control right"
-                               :onClick   #(monthpicker-change-month cursor owner d/next-month result-ch)} "→"))))))
+                 (dom/div #js {:className (str "control right" (when-not can-go-forward? " disabled"))
+                               :onClick   (when can-go-forward?
+                                            #(monthpicker-change-month cursor owner d/next-month result-ch))} ""))))))
+
+
 
 (defn- calendar-cell
   [cursor owner]

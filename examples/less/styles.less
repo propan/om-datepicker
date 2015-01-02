@@ -45,6 +45,22 @@
    cursor: pointer;
 }
 
+.month-panel .left:after {
+    content: "<";
+}
+
+.month-panel .right:after {
+    content: ">";
+}
+
+.month-panel .control.disabled {
+    cursor: initial;
+}
+
+.month-panel .control.disabled.left:after, .month-panel .control.disabled.right:after {
+    content: "";
+}
+
 .month-panel .label {
    width: 150px;
    text-align: center;

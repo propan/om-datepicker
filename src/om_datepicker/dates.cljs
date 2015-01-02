@@ -28,3 +28,7 @@
 (defn previous-month
   [date]
   (js/Date. (.getFullYear date) (dec (.getMonth date)) (.getDate date)))
+
+(defn is-future?
+  [date]
+  (> date (js/Date.)))

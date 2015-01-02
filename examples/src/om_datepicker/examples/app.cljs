@@ -14,11 +14,13 @@
 (om/root
  monthpicker-panel
  app-state
- {:path      [:month-panel]
-  :target    (js/document.getElementById "monthpicker-panel")})
+ {:path   [:month-panel]
+  :opts   {:allow-past? false
+           :end-date    (js/Date. 2015 3 0)}
+  :target (js/document.getElementById "monthpicker-panel")})
 
 (om/root
  datepicker-panel
  app-state
- {:path      [:date-panel]
-  :target    (js/document.getElementById "datepicker-panel")})
+ {:path   [:date-panel]
+  :target (js/document.getElementById "datepicker-panel")})
