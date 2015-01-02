@@ -23,4 +23,6 @@
  datepicker-panel
  app-state
  {:path   [:date-panel]
+  :opts   {:allow-past? false
+           :end-date    (js/Date. 2015 1 21)}
   :target (js/document.getElementById "datepicker-panel")})

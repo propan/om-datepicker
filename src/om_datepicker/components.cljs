@@ -20,21 +20,29 @@
     month-date))
 
 (defn- generate-calendar
-  [date selected-date]
-  (let [sliding-date (calendar-start-date date)]
+  [date selected-date allow-past? end-date]
+  (let [today        (d/today)
+        sliding-date (calendar-start-date date)]
     (for [week (range 6)
           day  (range 7)]
       (let [sliding-date (d/switch-date! sliding-date 1)
+            allowed?     (and (or allow-past?
+                                  (> sliding-date today))
+                              (or (nil? end-date)
+                                  (<= sliding-date end-date)))
             day          (.getDay sliding-date)]
-        {:class (str "cell"
-                     (when (= sliding-date selected-date)
-                       " selected")
-                     (when (= (.getMonth date) (.getMonth sliding-date))
-                       " instant")
-                     (when (or (= day 0) (= day 6))
-                       " weekend"))
-         :date  (d/date-instance sliding-date)
-         :text  (.getDate sliding-date)}))))
+        {:class    (str "cell"
+                        (when-not allowed?
+                          " disabled")
+                        (when (= sliding-date selected-date)
+                          " selected")
+                        (when (= (.getMonth date) (.getMonth sliding-date))
+                          " instant")
+                        (when (or (= day 0) (= day 6))
+                          " weekend"))
+         :allowed? allowed?
+         :date     (d/date-instance sliding-date)
+         :text     (.getDate sliding-date)}))))
 
 (defn- month-panel-label
   [date]
@@ -56,10 +64,10 @@
 
    opts - a map of options. The following keys are supported:
 
-     :allow-past? - if false, switching to the month in the past is not allowed
-     :end-date    - if set, moving forward is limited by that date
-     :value-ch    - if set, the picker value are updated with the values from that channel
-     :result-ch   - if passed, then values are put in that channel instead of :value key of the cursor
+     :allow-past? - if false, picking a month from the past is not allowed
+     :end-date    - if set, picking a month from the future is limited by that date
+     :value-ch    - if set, the picker value is updated with the values from that channel
+     :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor
      :value       - initial value, used when there is no value in :value cursor
 
    Example:
@@ -100,8 +108,10 @@
     om/IRenderState
     (render-state [_ {:keys [value result-ch]}]
       (let [value           (or (:value cursor) value)
-            can-go-back?    (or allow-past? (d/is-future? value))
-            can-go-forward? (or (nil? end-date) (<= value end-date))]
+            can-go-back?    (or allow-past?
+                                (d/is-future? value))
+            can-go-forward? (or (nil? end-date)
+                                (<= (d/next-month value) end-date))]
         (dom/div #js {:className "month-panel"}
                  (dom/div #js {:className (str "control left" (when-not can-go-back? " disabled"))
                                :onClick   (when can-go-back?
@@ -111,21 +121,40 @@
                                :onClick   (when can-go-forward?
                                             #(monthpicker-change-month cursor owner d/next-month result-ch))} ""))))))
 
-
-
 (defn- calendar-cell
   [cursor owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [highlighted]}]
-      (let [select-ch (om/get-shared owner :select-ch)]
+      (let [select-ch (om/get-shared owner :select-ch)
+            allowed?  (:allowed? cursor)]
         (dom/div #js {:className    (str (:class cursor) (when highlighted " highlighted"))
-                      :onClick      #(put! select-ch (:date cursor))
-                      :onMouseEnter #(om/set-state! owner :highlighted true)
-                      :onMouseLeave #(om/set-state! owner :highlighted nil)} (:text cursor))))))
+                      :onClick      (when allowed?
+                                      (fn []
+                                        (om/set-state! owner :highlighted nil)
+                                        (put! select-ch (:date cursor))))
+                      :onMouseEnter (when allowed?
+                                      #(om/set-state! owner :highlighted true))
+                      :onMouseLeave (when allowed?
+                                      #(om/set-state! owner :highlighted nil))} (:text cursor))))))
 
 (defn datepicker-panel
-  [cursor owner {:keys [allow-past? result-ch] :or {allow-past? true} :as options}]
+  "Creates a date-picker panel component.
+
+   opts - a map of options. The following keys are supported:
+
+     :allow-past? - if false, picking a date from the past is not allowed
+     :end-date    - if set, picking a date from the future is limited by that date
+     :result-ch   - if passed, then values are put in that channel instead of :value key of the cursor
+
+   Example:
+
+     (om/build datepicker-panel app
+            {:opts {:allow-past? false
+                    :end-date    ...
+                    :result-ch   ...}})
+  "
+  [cursor owner {:keys [allow-past? end-date result-ch] :or {allow-past? true} :as opts}]
   (reify
     om/IInitState
     (init-state [_]
@@ -153,11 +182,13 @@
     om/IRenderState
     (render-state [_ {:keys [month-change-ch select-ch value]}]
       (let [selected (:value cursor)
-            calendar (generate-calendar value selected)]
+            calendar (generate-calendar value selected allow-past? end-date)]
         (apply dom/div #js {:className "date-panel"}
                (om/build monthpicker-panel
                          {:value value}
-                         {:opts {:result-ch month-change-ch}})
+                         {:opts {:allow-past? allow-past?
+                                 :end-date    end-date
+                                 :result-ch   month-change-ch}})
                ;; day names
                (apply dom/div #js {:className "days"}
                       (for [day days]
