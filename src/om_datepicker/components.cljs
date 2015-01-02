@@ -1,6 +1,6 @@
 (ns om-datepicker.components
   (:require-macros [cljs.core.async.macros :refer [go-loop alt!]])
-  (:require [cljs.core.async :refer [chan put!]]
+  (:require [cljs.core.async :as async :refer [chan put! sliding-buffer]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [om-datepicker.dates :as d]))
@@ -31,74 +31,106 @@
                        " instant")
                      (when (or (= day 0) (= day 6))
                        " weekend"))
-         :date  (.getDate sliding-date)}))))
+         :date  (d/date-instance sliding-date)
+         :text  (.getDate sliding-date)}))))
 
 (defn- month-panel-label
   [date]
   (str (get months (.getMonth date)) " " (.getFullYear date)))
 
-(defn- change-month
-  [owner change-fn result-ch]
-  (let [old-value (om/get-state owner :value)
+(defn- monthpicker-change-month
+  [cursor owner change-fn result-ch]
+  (let [old-value (or (:value cursor)
+                      (om/get-state owner :value))
         new-value (change-fn old-value)]
-    (om/set-state! owner :value new-value)
-    (when result-ch
-      (put! result-ch new-value))))
+    (when-not (= old-value new-value)
+      (om/set-state! owner :value new-value)
+      (if result-ch
+        (put! result-ch new-value)
+        (om/update! cursor [:value] new-value)))))
 
 (defn monthpicker-panel
-  [cursor owner {:keys [allow-past? end-date result-ch value] :or {allow-past? true value (d/current-month) :as opts}}]
+  ;; TODO: allow-past? end-date
+  [cursor owner {:keys [allow-past? end-date value-ch result-ch value] :or {allow-past? true value (d/current-month)}}]
   (reify
     om/IInitState
     (init-state [_]
-      {:value     value
-       :result-ch result-ch})
+      {:value     (or (:value cursor) value)
+       :result-ch result-ch
+       :kill-ch   (chan (sliding-buffer 1))})
+
+    om/IWillMount
+    (will-mount [_]
+      (let [{:keys [kill-ch result-ch]} (om/get-state owner)]
+        (when value-ch
+          (go-loop []
+                   (let [[v ch] (alts! [kill-ch value-ch] :priority true)]
+                     (condp = ch
+                       value-ch (do
+                                  (monthpicker-change-month cursor owner (constantly v) result-ch)
+                                  (recur))
+                       kill-ch  (do
+                                  (async/close! kill-ch))
+                       nil))))))
+
+    om/IWillUnmount
+    (will-unmount [_]
+      (put! (om/get-state owner :kill-ch) true))
     
     om/IRenderState
     (render-state [_ {:keys [value result-ch]}]
-      (dom/div #js {:className "month-panel"}
-               (dom/div #js {:className "control left"
-                             :onClick   #(change-month owner d/previous-month result-ch)} "←")
-               (dom/div #js {:className "label"} (month-panel-label value))
-               (dom/div #js {:className "control right"
-                             :onClick   #(change-month owner d/next-month result-ch)} "→")))))
+      (let [value (or (:value cursor) value)]
+        (dom/div #js {:className "month-panel"}
+                 (dom/div #js {:className "control left"
+                               :onClick   #(monthpicker-change-month cursor owner d/previous-month result-ch)} "←")
+                 (dom/div #js {:className "label"} (month-panel-label value))
+                 (dom/div #js {:className "control right"
+                               :onClick   #(monthpicker-change-month cursor owner d/next-month result-ch)} "→"))))))
 
-(defn calendar-cell
+(defn- calendar-cell
   [cursor owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [highlighted]}]
-      (dom/div #js {:className    (str (:class cursor) (when highlighted " highlighted"))
-                    :onClick      #(print :selected (:date cursor))
-                    :onMouseEnter #(om/set-state! owner :highlighted true)
-                    :onMouseLeave #(om/set-state! owner :highlighted nil)} (:date cursor)))))
+      (let [select-ch (om/get-shared owner :select-ch)]
+        (dom/div #js {:className    (str (:class cursor) (when highlighted " highlighted"))
+                      :onClick      #(put! select-ch (:date cursor))
+                      :onMouseEnter #(om/set-state! owner :highlighted true)
+                      :onMouseLeave #(om/set-state! owner :highlighted nil)} (:text cursor))))))
 
 (defn datepicker-panel
-  [cursor owner {:keys [allow-past?] :or {allow-past? true} :as options}]
+  [cursor owner {:keys [allow-past? result-ch] :or {allow-past? true} :as options}]
   (reify
     om/IInitState
     (init-state [_]
       {:month-change-ch (chan)
-       :value           (d/first-of-month (:value cursor))})
+       :select-ch       (chan (sliding-buffer 1))
+       :value           (d/first-of-month (get cursor :value (d/today)))})
 
     om/IWillMount
     (will-mount [_]
-      (let [{:keys [month-change-ch]} (om/get-state owner)]
+      (let [{:keys [month-change-ch select-ch]} (om/get-state owner)]
         (go-loop []
-                 (let [[v ch] (alts! [month-change-ch])]
+                 (let [[v ch] (alts! [month-change-ch select-ch])]
                    (condp = ch
                      month-change-ch (do
                                        (om/set-state! owner :value v)
                                        (recur))
+                     select-ch       (do
+                                       (if result-ch
+                                         (put! result-ch v)
+                                         (om/update! cursor [:value] v))
+                                       (om/set-state! owner :value (d/first-of-month v))
+                                       (recur))
                      nil)))))
 
     om/IRenderState
-    (render-state [_ {:keys [month-change-ch value]}]
-      (let [selected value
-            calendar (generate-calendar selected)]
+    (render-state [_ {:keys [month-change-ch select-ch value]}]
+      (let [calendar (generate-calendar value)]
         (apply dom/div #js {:className "date-panel"}
-               (om/build monthpicker-panel cursor
-                         {:opts {:value     selected
-                                 :result-ch month-change-ch}})
+               (om/build monthpicker-panel
+                         {:value value}
+                         {:opts {:result-ch month-change-ch}})
                ;; day names
                (apply dom/div #js {:className "days"}
                       (for [day days]
@@ -107,5 +139,6 @@
                (for [week (partition 7 calendar)]
                  (apply dom/div #js {:className "week"}
                         (for [day week]
-                          (om/build calendar-cell day)))))))))
+                          (om/build calendar-cell day
+                                    {:shared {:select-ch select-ch}})))))))))
 

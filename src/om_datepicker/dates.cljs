@@ -1,14 +1,16 @@
 (ns om-datepicker.dates)
 
+(defn date-instance
+  [date]
+  (js/Date. (.getFullYear date) (.getMonth date) (.getDate date)))
+
 (defn today
   []
-  (let [now (js/Date.)]
-    (js/Date. (.getFullYear now) (.getMonth now) (.getDate now) 0 0 0 0)))
+  (date-instance (js/Date.)))
 
 (defn first-of-month
   [date]
-  (doto (js/Date. date)
-    (.setDate 1)))
+  (js/Date. (.getFullYear date) (.getMonth date) 1))
 
 (defn- switch-date!
   [date offset]
