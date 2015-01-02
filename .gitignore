@@ -9,3 +9,5 @@ pom.xml.asc
 *.js
 /.lein-*
 /.nrepl-port
+/out
+/examples/out
