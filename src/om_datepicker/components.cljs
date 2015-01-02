@@ -20,13 +20,15 @@
     month-date))
 
 (defn- generate-calendar
-  [date]
+  [date selected-date]
   (let [sliding-date (calendar-start-date date)]
     (for [week (range 6)
           day  (range 7)]
       (let [sliding-date (d/switch-date! sliding-date 1)
             day          (.getDay sliding-date)]
         {:class (str "cell"
+                     (when (= sliding-date selected-date)
+                       " selected")
                      (when (= (.getMonth date) (.getMonth sliding-date))
                        " instant")
                      (when (or (= day 0) (= day 6))
@@ -126,7 +128,8 @@
 
     om/IRenderState
     (render-state [_ {:keys [month-change-ch select-ch value]}]
-      (let [calendar (generate-calendar value)]
+      (let [selected (:value cursor)
+            calendar (generate-calendar value selected)]
         (apply dom/div #js {:className "date-panel"}
                (om/build monthpicker-panel
                          {:value value}
