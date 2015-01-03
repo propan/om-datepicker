@@ -29,6 +29,24 @@
   [date]
   (js/Date. (.getFullYear date) (dec (.getMonth date)) (.getDate date)))
 
-(defn is-future?
+(defn coerse-date
   [date]
-  (> date (js/Date.)))
+  (if (number? date)
+    (switch-date! (today) date)
+    date))
+
+(defprotocol DateTimeProtocol
+  (after? [this that])
+  (before? [this that])
+  (is-future? [this]))
+
+(extend-protocol DateTimeProtocol
+  js/Date
+  (after? [this that]
+    (> (.getTime this) (.getTime that)))
+
+  (before? [this that]
+    (<= (.getTime this) (.getTime that)))
+
+  (is-future? [this]
+    (> (.getTime this) (.getTime (js/Date.)))))
