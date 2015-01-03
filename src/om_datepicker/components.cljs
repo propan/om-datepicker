@@ -164,13 +164,14 @@
       (init-state [_]
         {:month-change-ch (chan)
          :select-ch       (chan (sliding-buffer 1))
+         :kill-ch         (chan (sliding-buffer 1))
          :value           (d/first-of-month (get cursor :value (d/today)))})
 
       om/IWillMount
       (will-mount [_]
-        (let [{:keys [month-change-ch select-ch]} (om/get-state owner)]
+        (let [{:keys [kill-ch month-change-ch select-ch]} (om/get-state owner)]
           (go-loop []
-                   (let [[v ch] (alts! [month-change-ch select-ch])]
+                   (let [[v ch] (alts! [kill-ch month-change-ch select-ch] :priority true)]
                      (condp = ch
                        month-change-ch (do
                                          (om/set-state! owner :value v)
@@ -181,7 +182,15 @@
                                            (om/update! cursor [:value] v))
                                          (om/set-state! owner :value (d/first-of-month v))
                                          (recur))
+                       kill-ch         (do
+                                         (async/close! month-change-ch)
+                                         (async/close! select-ch)
+                                         (async/close! kill-ch))
                        nil)))))
+
+      om/IWillUnmount
+      (will-unmount [_]
+        (put! (om/get-state owner :kill-ch) true))
 
       om/IRenderState
       (render-state [_ {:keys [month-change-ch select-ch value]}]
