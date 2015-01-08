@@ -32,5 +32,4 @@
  datepicker
  app-state
  {:path   [:datepicker]
-  :opts   {:x 2}
   :target (js/document.getElementById "datepicker-demo")})

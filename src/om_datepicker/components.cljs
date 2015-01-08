@@ -225,14 +225,37 @@
     (str (get days-3 day) ", " (.getDate date) " " (get months-short (.getMonth date)))))
 
 (defn datepicker
-  [cursor owner]
+  [cursor owner {:keys [allow-past? end-date result-ch] :or {allow-past? true} :as opts}]
   (reify
     om/IInitState
     (init-state [_]
-      {:expanded false})
+      {:expanded  false
+       :select-ch (chan (sliding-buffer 1))
+       :kill-ch   (chan (sliding-buffer 1))})
+
+    om/IWillMount
+    (will-mount [_]
+      (let [{:keys [kill-ch select-ch]} (om/get-state owner)]
+        (go-loop []
+                 (let [[v ch] (alts! [kill-ch select-ch] :priority true)]
+                   (condp = ch
+                     select-ch       (do
+                                       (if result-ch
+                                         (put! result-ch v)
+                                         (om/update! cursor [:value] v))
+                                       (om/set-state! owner :expanded false)
+                                       (recur))
+                     kill-ch         (do
+                                       (async/close! select-ch)
+                                       (async/close! kill-ch))
+                     nil)))))
+
+    om/IWillUnmount
+    (will-unmount [_]
+      (put! (om/get-state owner :kill-ch) true))
 
     om/IRenderState
-    (render-state [_ {:keys [highlighted expanded]}]
+    (render-state [_ {:keys [highlighted expanded select-ch]}]
       (dom/div #js {:className "datepicker"}
                (dom/input #js {:type         "text"
                                :readOnly     "readonly"
@@ -248,4 +271,7 @@
                         (dom/div #js {:className "datepicker-popup-inner"}
                                  (dom/div #js {:className "datepicker-popup-content"}
                                           (dom/div #js {:className "pointer"})
-                                          (om/build datepicker-panel cursor))))))))
+                                          (om/build datepicker-panel cursor
+                                                    {:opts {:allow-past? allow-past?
+                                                            :end-date    end-date
+                                                            :result-ch   select-ch}}))))))))
