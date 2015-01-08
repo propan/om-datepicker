@@ -3,7 +3,8 @@
   (:require [cljs.core.async :as async :refer [chan put! sliding-buffer]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [om-datepicker.dates :as d :refer [after? before? is-future?]]))
+            [om-datepicker.dates :as d :refer [after? before? is-future?]]
+            [om-datepicker.events :refer [mouse-click]]))
 
 (def days ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"])
 (def days-3 ["Mon", "Tue", "Wen", "Tho", "Fri", "San", "Sun"])
@@ -229,25 +230,31 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:expanded  false
-       :select-ch (chan (sliding-buffer 1))
-       :kill-ch   (chan (sliding-buffer 1))})
+      {:expanded       false
+       :mouse-click-ch (mouse-click)
+       :select-ch      (chan (sliding-buffer 1))
+       :kill-ch        (chan (sliding-buffer 1))})
 
     om/IWillMount
     (will-mount [_]
-      (let [{:keys [kill-ch select-ch]} (om/get-state owner)]
+      (let [{:keys [kill-ch mouse-click-ch select-ch]} (om/get-state owner)]
         (go-loop []
-                 (let [[v ch] (alts! [kill-ch select-ch] :priority true)]
+                 (let [[v ch] (alts! [kill-ch mouse-click-ch select-ch] :priority true)]
                    (condp = ch
-                     select-ch       (do
-                                       (if result-ch
-                                         (put! result-ch v)
-                                         (om/update! cursor [:value] v))
-                                       (om/set-state! owner :expanded false)
-                                       (recur))
-                     kill-ch         (do
-                                       (async/close! select-ch)
-                                       (async/close! kill-ch))
+                     mouse-click-ch (let [n (om/get-node owner)]
+                                      (when-not (.contains n (.-target v))
+                                        (om/set-state! owner :expanded false))
+                                      (recur))
+                     select-ch      (do
+                                      (if result-ch
+                                        (put! result-ch v)
+                                        (om/update! cursor [:value] v))
+                                      (om/set-state! owner :expanded false)
+                                      (recur))
+                     kill-ch        (do
+                                      (async/close! mouse-click-ch)
+                                      (async/close! select-ch)
+                                      (async/close! kill-ch))
                      nil)))))
 
     om/IWillUnmount
