@@ -1,11 +1,12 @@
 (ns om-datepicker.examples.app
   (:require [lively]
             [om.core :as om :include-macros true]
-            [om-datepicker.components :refer [datepicker-panel monthpicker-panel]]))
+            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel]]))
 
 (defonce app-state
   (atom {:month-panel {}
-         :date-panel  {:value (js/Date.)}}))
+         :date-panel  {:value (js/Date.)}
+         :datepicker  {:value (js/Date.)}}))
 
 (enable-console-print!)
 
@@ -26,3 +27,10 @@
   :opts   {:allow-past? false
            :end-date    15}
   :target (js/document.getElementById "datepicker-panel")})
+
+(om/root
+ datepicker
+ app-state
+ {:path   [:datepicker]
+  :opts   {:x 2}
+  :target (js/document.getElementById "datepicker-demo")})

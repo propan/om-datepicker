@@ -6,10 +6,15 @@
             [om-datepicker.dates :as d :refer [after? before? is-future?]]))
 
 (def days ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"])
+(def days-3 ["Mon", "Tue", "Wen", "Tho", "Fri", "San", "Sun"])
 
 (def months ["January", "February", "March", "April",
              "May", "June", "July", "August",
              "September", "October", "November", "December"])
+
+(def months-short ["Jan", "Feb", "Mar", "Apr",
+                   "May", "Jun", "Jul", "Aug",
+                   "Sep", "Oct", "Nov", "Dec"])
 
 (defn- calendar-start-date
   [month-date]
@@ -213,3 +218,34 @@
                             (om/build calendar-cell day
                                       {:shared {:select-ch select-ch}}))))))))))
 
+(defn- datepicker-label
+  [date]
+  (let [day (.getDay date)
+        day (if (= day 0) 6 (dec day))]
+    (str (get days-3 day) ", " (.getDate date) " " (get months-short (.getMonth date)))))
+
+(defn datepicker
+  [cursor owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:expanded false})
+
+    om/IRenderState
+    (render-state [_ {:keys [highlighted expanded]}]
+      (dom/div #js {:className "datepicker"}
+               (dom/input #js {:type         "text"
+                               :readOnly     "readonly"
+                               :value        (datepicker-label (:value cursor))
+                               :className    (str "datepicker-input" (when highlighted
+                                                                  " highlighted"))
+                               :onClick      #(om/update-state! owner :expanded (fn [v]
+                                                                                  (if v false true)))
+                               :onMouseEnter #(om/set-state! owner :highlighted true)
+                               :onMouseLeave #(om/set-state! owner :highlighted nil)})
+               (dom/div #js {:className "datepicker-popup"
+                             :style #js {:display (if expanded "block" "none")}}
+                        (dom/div #js {:className "datepicker-popup-inner"}
+                                 (dom/div #js {:className "datepicker-popup-content"}
+                                          (dom/div #js {:className "pointer"})
+                                          (om/build datepicker-panel cursor))))))))

@@ -25,6 +25,7 @@
 .date-panel {
    border: 1px solid #E0E0E0;
    width: 210px;
+   background-color: #FFFFFF;
    .noselect;
 }
 
@@ -99,3 +100,60 @@
     background-color: #F0F0F0;
 }
 
+.datepicker {
+    position: relative;
+}
+
+.datepicker-input {
+    padding: 6px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 14px;
+    line-height: 20px;
+    vertical-align: middle;
+    width: 110px;
+    border: 1px solid #E0E0E0;
+}
+
+.datepicker-input.highlighted {
+    border: 1px solid #DE00BB;
+}
+
+.datepicker-popup {
+    position: absolute;
+    margin-top: 25px;
+}
+
+.datepicker-popup-inner {
+    position: absolute;
+    margin-top: -20px;
+}
+
+.datepicker-popup .datepicker-popup-content {
+    background-color: #fff;
+    -webkit-box-shadow: 0 0 5px 1px gray;
+    box-shadow: 0 0 5px 1px gray;
+    position: relative;
+}
+
+.datepicker .pointer {
+    position: absolute;
+    left: 25px;
+}
+
+.datepicker-popup .pointer:before {
+    bottom: 100%;
+    border: solid transparent;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+    border-bottom-color: #fff;
+    border-width: 10px;
+    left: 50%;
+}
+
+.datepicker-popup .date-panel {
+    border: none;
+}
