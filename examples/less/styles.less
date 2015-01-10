@@ -1,3 +1,25 @@
+@calendar-background-color: #FFFFFF;
+@calendar-border-color: #E0E0E0;
+
+@calendar-base-font-color: #BCBCBC;
+@calendar-instant-font-color: #333;
+@calendar-disabled-font-color: #999999;
+@calendar-highlighted-font-color: #FFFFFF;
+@calendar-selected-font-color: #FFFFFF;
+
+@calendar-days-cell-background-color: #F0F0F0;
+@calendar-weekend-background-color: #F0F0F0;
+@calendar-highlighted-background-color: #AAA;
+@calendar-selected-background-color: #666;
+
+@calendar-cell-width: 30px;
+@calendar-cell-height: @calendar-cell-width;
+@calendar-cell-line-height: @calendar-cell-height;
+
+@datepicker-border-color: #E0E0E0;
+@datepicker-highlighted-border-color: #AAAAAA;
+@datepicker-popup-background-color: #FFFFFF;
+
 .noselect {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -10,29 +32,29 @@
 .cell {
     float: left;
     text-align: center;
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
-    color: #BCBCBC;
+    width: @calendar-cell-width;
+    height: @calendar-cell-height;
+    line-height: @calendar-cell-line-height;
+    color: @calendar-base-font-color;
 }
 
 .days {
-    height: 30px;
-    border-bottom: 1px solid #E0E0E0;
-    border-top: 1px solid #E0E0E0;
+    height: @calendar-cell-width;
+    border-bottom: 1px solid @calendar-border-color;
+    border-top: 1px solid @calendar-border-color;
 }
 
 .date-panel {
-   border: 1px solid #E0E0E0;
-   width: 210px;
-   background-color: #FFFFFF;
+   border: 1px solid @calendar-border-color;
+   width: 7 * @calendar-cell-width;
+   background-color: @calendar-background-color;
    .noselect;
 }
 
 .month-panel {
-   width: 210px;
-   height: 30px;
-   line-height: 30px;
+   width: 7 * @calendar-cell-width;
+   height: @calendar-cell-height;
+   line-height: @calendar-cell-line-height;
    .noselect;
 }
 
@@ -41,7 +63,7 @@
 }
 
 .month-panel .control {
-   width: 30px;
+   width: @calendar-cell-width;
    text-align: center;
    cursor: pointer;
 }
@@ -63,42 +85,46 @@
 }
 
 .month-panel .label {
-   width: 150px;
+   width: 5 * @calendar-cell-width;
    text-align: center;
 }
 
 .cell.instant, .days > .cell {
-    color: #333;
+    color: @calendar-instant-font-color;
 }
 
 .days > .cell {
-    background-color: #F0F0F0;
+    background-color: @calendar-days-cell-background-color;
 }
 
 .week {
-    width: 210px;
-    height: 30px;
+    width: 7 * @calendar-cell-width;
+    height: @calendar-cell-height;
 }
 
 .week > .cell.highlighted {
-    color: #FFFFFF;
-    background-color: #AAA;
+    color: @calendar-highlighted-font-color;
+    background-color: @calendar-highlighted-background-color;
     cursor: pointer;
 }
 
 .week > .cell.disabled {
-    color: #999999;
+    color: @calendar-disabled-font-color;
     text-decoration: line-through;
 }
 
 .week > .cell.selected {
-    color: #FFFFFF;
-    background-color: #666;
+    color: @calendar-selected-font-color;
+    background-color: @calendar-selected-background-color;
 }
 
 .weekend {
-    background-color: #F0F0F0;
+    background-color: @calendar-weekend-background-color;
 }
+
+/*
+ * DatePicker
+ */
 
 .datepicker {
     position: relative;
@@ -113,11 +139,11 @@
     line-height: 20px;
     vertical-align: middle;
     width: 110px;
-    border: 1px solid #E0E0E0;
+    border: 1px solid @datepicker-border-color;
 }
 
 .datepicker-input.highlighted {
-    border: 1px solid #AAA;
+    border: 1px solid @datepicker-highlighted-border-color;
 }
 
 .datepicker-popup {
@@ -131,7 +157,7 @@
 }
 
 .datepicker-popup .datepicker-popup-content {
-    background-color: #fff;
+    background-color: @datepicker-popup-background-color;
     -webkit-box-shadow: 0 0 5px 1px gray;
     box-shadow: 0 0 5px 1px gray;
     position: relative;
@@ -150,7 +176,7 @@
     width: 0;
     position: absolute;
     pointer-events: none;
-    border-bottom-color: #fff;
+    border-bottom-color: @datepicker-popup-background-color;
     border-width: 10px;
     left: 50%;
 }
