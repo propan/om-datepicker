@@ -17,7 +17,7 @@
  app-state
  {:path   [:month-panel]
   :opts   {:allow-past? false
-           :end-date    (js/Date. 2015 3 0)}
+           :end-date    60}
   :target (js/document.getElementById "monthpicker-panel")})
 
 (om/root
