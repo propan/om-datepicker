@@ -226,6 +226,22 @@
     (str (get days-3 day) ", " (.getDate date) " " (get months-short (.getMonth date)))))
 
 (defn datepicker
+  "Creates a date-picker component.
+
+   opts - a map of options. The following keys are supported:
+
+     :allow-past? - if false, picking a date from the past is not allowed.
+     :end-date    - if set, picking a date from the future is limited by that date.
+                    Can be a date or a number of days from today.
+     :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
+
+   Example:
+
+     (om/build datepicker app
+            {:opts {:allow-past? false
+                    :end-date    ...
+                    :result-ch   ...}})
+  "
   [cursor owner {:keys [allow-past? end-date result-ch] :or {allow-past? true} :as opts}]
   (reify
     om/IInitState
