@@ -6,7 +6,9 @@ pom.xml.asc
 *.jar
 *.class
 *.lst
-*.js
+om-datepicker.js
+examples/app.js
+examples/app.min.js
 /.lein-*
 /.nrepl-port
 /out

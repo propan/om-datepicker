@@ -1,6 +1,5 @@
 (ns om-datepicker.examples.app
-  (:require [lively]
-            [om.core :as om :include-macros true]
+  (:require [om.core :as om :include-macros true]
             [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel]]))
 
 (defonce app-state
@@ -9,8 +8,6 @@
          :datepicker  {:value (js/Date.)}}))
 
 (enable-console-print!)
-
-(lively/start "/app.js" {:polling-rate 500})
 
 (om/root
  monthpicker-panel

@@ -1,6 +1,6 @@
 # om-datepicker
 
-a collection if various date/month picker components for [Om][0].
+a collection of various date/month picker components for [Om][0].
 
 [Live demo] [1]
 

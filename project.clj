@@ -1,5 +1,5 @@
 (defproject om-datepicker "0.1.0-SNAPSHOT"
-  :description "a datepicker component for Om"
+  :description "a collection of various date/month picker components for Om"
   :url "http://github.com/prokpa/om-datepicker"
 
   :license {:name "Eclipse Public License"
@@ -8,9 +8,7 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2644" :scope "provided"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha" :scope "provided"]
-                 [org.om/om "0.8.0" :scope "provided"]
-
-                 [lively "0.1.2"]]
+                 [org.om/om "0.8.0" :scope "provided"]]
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
             [lein-less "1.7.2"]]
@@ -38,6 +36,10 @@
 
             {:id           "gh-pages"
              :source-paths ["src" "examples/src"]
-             :compiler     {:output-to     "examples/app.min.js"
-                            :optimizations :advanced
-                            :pretty-print false}}]})
+             :compiler     {:output-to        "examples/app.min.js"
+                            :optimizations    :advanced
+                            :pretty-print     false
+                            :preamble         ["../resources/vendor/react/react-with-addons-0.12.2.min.js"]
+                            :externs          ["../resources/vendor/react/react-with-addons-0.12.2.js"]
+                            :closure-warnings {:externs-validation :off
+                                               :non-standard-jsdoc :off}}}]})
