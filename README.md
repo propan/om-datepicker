@@ -95,4 +95,4 @@ Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
 
 [0]: http://github.com/swannodette/om
-[1]: http://github.com/propan/om-datepicker
+[1]: http://propan.github.io/om-datepicker/
