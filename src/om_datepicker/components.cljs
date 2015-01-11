@@ -135,12 +135,14 @@
     om/IRenderState
     (render-state [_ {:keys [highlighted]}]
       (let [select-ch (om/get-shared owner :select-ch)
-            allowed?  (:allowed? cursor)]
+            allowed?  (:allowed? cursor)
+            touch-fn  (when allowed?
+                        (fn []
+                          (om/set-state! owner :highlighted nil)
+                          (put! select-ch (:date cursor))))]
         (dom/div #js {:className    (str (:class cursor) (when highlighted " highlighted"))
-                      :onClick      (when allowed?
-                                      (fn []
-                                        (om/set-state! owner :highlighted nil)
-                                        (put! select-ch (:date cursor))))
+                      :onClick      touch-fn
+                      :onTouchStart touch-fn
                       :onMouseEnter (when allowed?
                                       #(om/set-state! owner :highlighted true))
                       :onMouseLeave (when allowed?
