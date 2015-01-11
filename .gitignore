@@ -11,4 +11,4 @@ pom.xml.asc
 /.nrepl-port
 /out
 /examples/out
-/examples/public/css/styles.css
+/examples/public/css/*.css
