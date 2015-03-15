@@ -11,13 +11,10 @@
    :medium ["Su" "Mo" "Tu" "We" "Th" "Fr" "Sa"]
    :long   ["Sun" "Mon" "Tue" "Wen" "Tho" "Fri" "San"]})
 
-(def months ["January", "February", "March", "April",
-             "May", "June", "July", "August",
-             "September", "October", "November", "December"])
-
-(def months-short ["Jan", "Feb", "Mar", "Apr",
-                   "May", "Jun", "Jul", "Aug",
-                   "Sep", "Oct", "Nov", "Dec"])
+(def months
+  {:short ["Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"]
+   :long  ["January" "February" "March" "April" "May" "June"
+           "July" "August" "September" "October" "November" "December"]})
 
 (defn- calendar-start-date
   [month-date first-day]
@@ -55,7 +52,7 @@
 
 (defn- month-panel-label
   [date]
-  (str (get months (.getMonth date)) " " (.getFullYear date)))
+  (str (get (:long months) (.getMonth date)) " " (.getFullYear date)))
 
 (defn- monthpicker-change-month
   [cursor owner change-fn result-ch]
@@ -235,7 +232,7 @@
 (defn- datepicker-label
   [date style]
   (let [labels (get days style)]
-    (str (get labels (.getDay date)) ", " (.getDate date) " " (get months-short (.getMonth date)))))
+    (str (get labels (.getDay date)) ", " (.getDate date) " " (get (:short months) (.getMonth date)))))
 
 (defn datepicker
   "Creates a date-picker component.
