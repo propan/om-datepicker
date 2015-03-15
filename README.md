@@ -9,7 +9,7 @@ a collection of various date/month picker components for [Om][0].
 Include the library in your leiningen project dependencies:
 
 ```clojure
-[om-datepicker "0.0.1"]
+[om-datepicker "0.0.2"]
 ```
 
 ### Datepicker
@@ -33,7 +33,9 @@ Include the library in your leiningen project dependencies:
 
 * :allow-past? - if false, picking a date from the past is not allowed.
 * :end-date    - if set, picking a date from the future is limited by that date. Can be a date or a number of days from today.
+* :first-day   - the first day of the week. Default: 1 (Monday)
 * :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
+* :style       - the style that will be applied to the string representations of days of the week. Possible values are :short, :medium and :long. Default value is :medium.
 
 ### Datepicker Panel
 
@@ -57,8 +59,10 @@ Include the library in your leiningen project dependencies:
 **Optional parameters:**
 
 * :allow-past? - if false, picking a date from the past is not allowed.
+* :first-day   - the first day of the week. Default: 1 (Monday)
 * :end-date    - if set, picking a date from the future is limited by that date. Can be a date or a number of days from today.
 * :result-ch   - if passed, then values are put in that channel instead of :value key of the cursor.
+* :style       - the style that will be applied to the string representations of days of the week. Possible values are :short, :medium and :long. Default value is :medium.
 
 ### Monthpicker
 
