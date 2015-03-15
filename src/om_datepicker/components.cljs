@@ -7,9 +7,9 @@
             [om-datepicker.events :refer [mouse-click]]))
 
 (def days
-  {:short  ["M", "T", "W", "T", "F", "S", "S"]
-   :medium ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-   :long   ["Mon", "Tue", "Wen", "Tho", "Fri", "San", "Sun"]})
+  {:short  ["S" "M" "T" "W" "T" "F" "S"]
+   :medium ["Su" "Mo" "Tu" "We" "Th" "Fr" "Sa"]
+   :long   ["Sun" "Mon" "Tue" "Wen" "Tho" "Fri" "San"]})
 
 (def months ["January", "February", "March", "April",
              "May", "June", "July", "August",
@@ -20,17 +20,18 @@
                    "Sep", "Oct", "Nov", "Dec"])
 
 (defn- calendar-start-date
-  [month-date]
+  [month-date first-day]
   (let [month-date (doto (js/Date. month-date) (.setDate 1))
         day        (.getDay month-date)
-        offset     (if (= 0 day) 7 day)]
+        offset     (- day (dec first-day))
+        offset     (if (pos? offset) offset (+ offset 7))]
     (.setDate month-date (- (.getDate month-date) offset))
     month-date))
 
 (defn- generate-calendar
-  [date selected-date allow-past? end-date]
+  [date selected-date allow-past? end-date first-day]
   (let [today        (d/today)
-        sliding-date (calendar-start-date date)]
+        sliding-date (calendar-start-date date first-day)]
     (for [week (range 6)
           day  (range 7)]
       (let [sliding-date (d/switch-date! sliding-date 1)
@@ -158,6 +159,7 @@
      :allow-past? - if false, picking a date from the past is not allowed.
      :end-date    - if set, picking a date from the future is limited by that date.
                     Can be a date or a number of days from today.
+     :first-day   - the first day of the week. Default: 1 (Monday)
      :result-ch   - if passed, then values are put in that channel instead of :value key of the cursor.
      :style       - the style that will be applied to the string representations of days of the week.
                     Possible values are :short, :medium and :long. Default value is :medium.
@@ -167,10 +169,13 @@
      (om/build datepicker-panel app
             {:opts {:allow-past? false
                     :end-date    ...
+                    :first-day   0
                     :result-ch   ...
                     :style       :long}})
   "
-  [cursor owner {:keys [allow-past? end-date result-ch style] :or {allow-past? true style :medium} :as opts}]
+  [cursor owner {:keys [allow-past? end-date first-day result-ch style]
+                 :or   {allow-past? true first-day 1 style :medium}
+                 :as   opts}]
   (let [end-date (d/coerse-date end-date)]
     (reify
       om/IInitState
@@ -208,7 +213,7 @@
       om/IRenderState
       (render-state [_ {:keys [month-change-ch select-ch value]}]
         (let [selected (:value cursor)
-              calendar (generate-calendar value selected allow-past? end-date)]
+              calendar (generate-calendar value selected allow-past? end-date first-day)]
           (apply dom/div #js {:className "date-panel"}
                  (om/build monthpicker-panel
                            {:value value}
@@ -217,8 +222,9 @@
                                    :result-ch   month-change-ch}})
                  ;; day names
                  (apply dom/div #js {:className "days"}
-                        (for [day (get days style)]
-                          (dom/div #js {:className "cell"} day)))
+                        (let [days (take 7 (drop first-day (cycle (get days style))))]
+                          (for [day days]
+                            (dom/div #js {:className "cell"} day))))
                  ;; calendar grid
                  (for [week (partition 7 calendar)]
                    (apply dom/div #js {:className "week"}
@@ -228,10 +234,8 @@
 
 (defn- datepicker-label
   [date style]
-  (let [labels (get days style)
-        day    (.getDay date)
-        day    (if (= day 0) 6 (dec day))]
-    (str (get labels day) ", " (.getDate date) " " (get months-short (.getMonth date)))))
+  (let [labels (get days style)]
+    (str (get labels (.getDay date)) ", " (.getDate date) " " (get months-short (.getMonth date)))))
 
 (defn datepicker
   "Creates a date-picker component.
@@ -241,6 +245,7 @@
      :allow-past? - if false, picking a date from the past is not allowed.
      :end-date    - if set, picking a date from the future is limited by that date.
                     Can be a date or a number of days from today.
+     :first-day   - the first day of the week. Default: 1 (Monday)
      :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
      :style       - the style that will be applied to the string representations of days of the week.
                     Possible values are :short, :medium and :long. Default value is :medium.
@@ -250,10 +255,13 @@
      (om/build datepicker app
             {:opts {:allow-past? false
                     :end-date    ...
+                    :first-day   0
                     :result-ch   ...
                     :style       :long}})
   "
-  [cursor owner {:keys [allow-past? end-date result-ch style] :or {allow-past? true style :medium} :as opts}]
+  [cursor owner {:keys [allow-past? end-date first-day result-ch style]
+                 :or   {allow-past? true first-day 1 style :medium}
+                 :as   opts}]
   (reify
     om/IInitState
     (init-state [_]
@@ -308,5 +316,6 @@
                                           (om/build datepicker-panel cursor
                                                     {:opts {:allow-past? allow-past?
                                                             :end-date    end-date
+                                                            :first-day   first-day
                                                             :result-ch   select-ch
                                                             :style       style}}))))))))

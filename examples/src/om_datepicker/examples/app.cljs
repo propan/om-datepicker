@@ -22,7 +22,8 @@
  app-state
  {:path   [:date-panel]
   :opts   {:allow-past? false
-           :end-date    15}
+           :end-date    15
+           :first-day   0}
   :target (js/document.getElementById "datepicker-panel")})
 
 (om/root
