@@ -6,8 +6,10 @@
             [om-datepicker.dates :as d :refer [after? before? is-future?]]
             [om-datepicker.events :refer [mouse-click]]))
 
-(def days ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"])
-(def days-3 ["Mon", "Tue", "Wen", "Tho", "Fri", "San", "Sun"])
+(def days
+  {:short  ["M", "T", "W", "T", "F", "S", "S"]
+   :medium ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+   :long   ["Mon", "Tue", "Wen", "Tho", "Fri", "San", "Sun"]})
 
 (def months ["January", "February", "March", "April",
              "May", "June", "July", "August",
@@ -157,15 +159,18 @@
      :end-date    - if set, picking a date from the future is limited by that date.
                     Can be a date or a number of days from today.
      :result-ch   - if passed, then values are put in that channel instead of :value key of the cursor.
+     :style       - the style that will be applied to the string representations of days of the week.
+                    Possible values are :short, :medium and :long. Default value is :medium.
 
    Example:
 
      (om/build datepicker-panel app
             {:opts {:allow-past? false
                     :end-date    ...
-                    :result-ch   ...}})
+                    :result-ch   ...
+                    :style       :long}})
   "
-  [cursor owner {:keys [allow-past? end-date result-ch] :or {allow-past? true} :as opts}]
+  [cursor owner {:keys [allow-past? end-date result-ch style] :or {allow-past? true style :medium} :as opts}]
   (let [end-date (d/coerse-date end-date)]
     (reify
       om/IInitState
@@ -212,7 +217,7 @@
                                    :result-ch   month-change-ch}})
                  ;; day names
                  (apply dom/div #js {:className "days"}
-                        (for [day days]
+                        (for [day (get days style)]
                           (dom/div #js {:className "cell"} day)))
                  ;; calendar grid
                  (for [week (partition 7 calendar)]
@@ -222,10 +227,11 @@
                                       {:shared {:select-ch select-ch}}))))))))))
 
 (defn- datepicker-label
-  [date]
-  (let [day (.getDay date)
-        day (if (= day 0) 6 (dec day))]
-    (str (get days-3 day) ", " (.getDate date) " " (get months-short (.getMonth date)))))
+  [date style]
+  (let [labels (get days style)
+        day    (.getDay date)
+        day    (if (= day 0) 6 (dec day))]
+    (str (get labels day) ", " (.getDate date) " " (get months-short (.getMonth date)))))
 
 (defn datepicker
   "Creates a date-picker component.
@@ -236,15 +242,18 @@
      :end-date    - if set, picking a date from the future is limited by that date.
                     Can be a date or a number of days from today.
      :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
+     :style       - the style that will be applied to the string representations of days of the week.
+                    Possible values are :short, :medium and :long. Default value is :medium.
 
    Example:
 
      (om/build datepicker app
             {:opts {:allow-past? false
                     :end-date    ...
-                    :result-ch   ...}})
+                    :result-ch   ...
+                    :style       :long}})
   "
-  [cursor owner {:keys [allow-past? end-date result-ch] :or {allow-past? true} :as opts}]
+  [cursor owner {:keys [allow-past? end-date result-ch style] :or {allow-past? true style :medium} :as opts}]
   (reify
     om/IInitState
     (init-state [_]
@@ -284,7 +293,7 @@
       (dom/div #js {:className "datepicker"}
                (dom/input #js {:type         "text"
                                :readOnly     "readonly"
-                               :value        (datepicker-label (:value cursor))
+                               :value        (datepicker-label (:value cursor) :long)
                                :className    (str "datepicker-input" (when highlighted
                                                                   " highlighted"))
                                :onClick      #(om/update-state! owner :expanded (fn [v]
@@ -299,4 +308,5 @@
                                           (om/build datepicker-panel cursor
                                                     {:opts {:allow-past? allow-past?
                                                             :end-date    end-date
-                                                            :result-ch   select-ch}}))))))))
+                                                            :result-ch   select-ch
+                                                            :style       style}}))))))))
