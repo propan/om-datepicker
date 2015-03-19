@@ -211,7 +211,7 @@
       (render-state [_ {:keys [month-change-ch select-ch value]}]
         (let [selected (:value cursor)
               calendar (generate-calendar value selected allow-past? end-date first-day)]
-          (apply dom/div #js {:className "date-panel"}
+          (apply dom/div #js {:className "gridline"}
                  (om/build monthpicker-panel
                            {:value value}
                            {:opts {:allow-past? allow-past?
