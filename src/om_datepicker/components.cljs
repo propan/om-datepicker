@@ -120,7 +120,7 @@
                                   (is-future? value))
               can-go-forward? (or (nil? end-date)
                                   (before? (d/next-month value) end-date))]
-          (dom/div #js {:className "month-panel"}
+          (dom/div #js {:className "month-panel navigation"}
                    (dom/div #js {:className (str "control left" (when-not can-go-back? " disabled"))
                                  :onClick   (when can-go-back?
                                               #(monthpicker-change-month cursor owner d/previous-month result-ch))} "")

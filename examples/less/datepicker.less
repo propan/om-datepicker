@@ -68,24 +68,6 @@
 
 .month-panel .control {
    width: @calendar-cell-width;
-   text-align: center;
-   cursor: pointer;
-}
-
-.month-panel .left:after {
-    content: "<";
-}
-
-.month-panel .right:after {
-    content: ">";
-}
-
-.month-panel .control.disabled {
-    cursor: initial;
-}
-
-.month-panel .control.disabled.left:after, .month-panel .control.disabled.right:after {
-    content: "";
 }
 
 .month-panel .label {
@@ -124,6 +106,31 @@
 
 .weekend {
     background-color: @calendar-weekend-background-color;
+}
+
+/*
+ * Navigation
+ */
+
+.navigation .control {
+   text-align: center;
+   cursor: pointer;
+}
+
+.navigation .control.left:after {
+    content: "<";
+}
+
+.navigation .control.right:after {
+    content: ">";
+}
+
+.navigation .control.disabled {
+    cursor: initial;
+}
+
+.navigation .control.disabled.left:after, .navigation .control.disabled.right:after {
+    content: "";
 }
 
 /*
