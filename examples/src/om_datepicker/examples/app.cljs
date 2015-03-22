@@ -1,11 +1,13 @@
 (ns om-datepicker.examples.app
   (:require [om.core :as om :include-macros true]
-            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel]]))
+            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel rangepicker]]))
 
 (defonce app-state
   (atom {:month-panel {}
          :date-panel  {:value (js/Date.)}
-         :datepicker  {:value (js/Date.)}}))
+         :datepicker  {:value (js/Date.)}
+         :rangepicker {:start (js/Date.)
+                       :end   (js/Date.)}}))
 
 (enable-console-print!)
 
@@ -31,3 +33,9 @@
  app-state
  {:path   [:datepicker]
   :target (js/document.getElementById "datepicker-demo")})
+
+(om/root
+ rangepicker
+ app-state
+ {:path   [:rangepicker]
+  :target (js/document.getElementById "rangepicker-demo")})

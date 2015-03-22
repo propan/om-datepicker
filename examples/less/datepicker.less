@@ -1,5 +1,5 @@
 /*
- * Datepicker Styles
+ * Datepicker Properties
  */
 
 @calendar-background-color: #FFFFFF;
@@ -12,7 +12,7 @@
 @calendar-selected-font-color: #FFFFFF;
 
 @calendar-days-cell-background-color: #F0F0F0;
-@calendar-weekend-background-color: #F0F0F0;
+@calendar-weekend-background-color: #F9F9F9;
 @calendar-highlighted-background-color: #AAA;
 @calendar-selected-background-color: #666;
 
@@ -24,6 +24,15 @@
 @datepicker-highlighted-border-color: #AAAAAA;
 @datepicker-popup-background-color: #FFFFFF;
 
+/*
+ * Rangepicker Properties
+ */
+
+@rangepicker-calendar-cell-width: 20px;
+@rangepicker-calendar-cell-height: @rangepicker-calendar-cell-width;
+@rangepicker-calendar-cell-line-height: @rangepicker-calendar-cell-width;
+
+
 .noselect {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -31,21 +40,6 @@
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
-}
-
-.cell {
-    float: left;
-    text-align: center;
-    width: @calendar-cell-width;
-    height: @calendar-cell-height;
-    line-height: @calendar-cell-line-height;
-    color: @calendar-base-font-color;
-}
-
-.days {
-    height: @calendar-cell-width;
-    border-bottom: 1px solid @calendar-border-color;
-    border-top: 1px solid @calendar-border-color;
 }
 
 .gridline {
@@ -75,6 +69,21 @@
        text-align: center;
    }
 
+}
+
+.cell {
+    float: left;
+    text-align: center;
+    width: @calendar-cell-width;
+    height: @calendar-cell-height;
+    line-height: @calendar-cell-line-height;
+    color: @calendar-base-font-color;
+}
+
+.days {
+    height: @calendar-cell-width;
+    border-bottom: 1px solid @calendar-border-color;
+    border-top: 1px solid @calendar-border-color;
 }
 
 .cell.instant, .days > .cell {
@@ -140,15 +149,15 @@
 }
 
 /*
- * DatePicker
+ * DatePicker + RangePicker
  */
 
-.datepicker {
+.datepicker, .rangepicker {
     position: relative;
     display: inline-block;
 }
 
-.datepicker-input {
+.datepicker-input, .rangepicker-input {
     padding: 6px;
     cursor: pointer;
     text-align: center;
@@ -163,19 +172,23 @@
    .noselect;
 }
 
-.datepicker-input.highlighted {
+.datepicker-input.highlighted, .rangepicker-input.highlighted {
     border: 1px solid @datepicker-highlighted-border-color;
 }
 
-.datepicker-popup-inner {
-    position: absolute;
-    margin-top: -20px;
-}
+/*
+ * DatePicker Only
+ */
 
 .datepicker-popup {
 
     position: absolute;
     margin-top: 25px;
+
+    .datepicker-popup-inner {
+        position: absolute;
+        margin-top: -20px;
+    }
 
     .datepicker-popup-content {
         background-color: @datepicker-popup-background-color;
@@ -206,4 +219,125 @@
         border: none;
     }
 
+}
+
+/*
+ * RangePicker Only
+ */
+
+.rangepicker-input {
+    width: 190px;
+}
+
+.rangepicker .daterange-input {
+    padding: 5px 4px 3px 4px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 12px;
+    line-height: 14px;
+    vertical-align: middle;
+    width: 80px;
+    border: 1px solid @datepicker-border-color;
+    -webkit-appearance: none;
+    -webkit-border-radius: 0;
+    border-radius: 0;
+   .noselect;
+}
+
+.rangepicker .daterange-input.highlighted {
+    border-color: #116AE0;
+}
+
+.rangepicker .button {
+    font-size: 12px;
+    line-height: 14px;
+    vertical-align: middle;
+    width: 80px;
+    cursor: pointer;
+    padding: 5px 4px 3px 4px;
+    display: inline-block;
+    text-align: center;
+    border: 1px @datepicker-border-color solid;
+    border-radius: 4px;
+    .noselect;
+}
+
+.rangepicker .button:hover {
+    border-color: darken(@datepicker-border-color, 10%);
+}
+
+.rangepicker .controls-panel {
+    padding: 5px 3px;
+    text-align: center;
+}
+
+.rangepicker .inputs-panel, .rangepicker .buttons-panel {
+    display: inline-block;
+    margin: 3px;
+}
+
+.buttons-panel .button:first-child {
+    margin-left: 0;
+    margin-right: 7px;
+}
+
+.buttons-panel .button:last-child {
+    margin-left: 7px;
+    margin-right: 0;
+}
+
+.rangepicker {
+
+    font-size: 12px;
+    line-height: 12px;
+
+    .rangepicker-popup {
+        position: absolute;
+        width: 466px;
+        border: 1px @datepicker-border-color solid;
+    }
+
+    .rangepicker-popup-content {
+        background-color: @datepicker-popup-background-color;
+    }
+
+    .months div {
+        display: inline-block;
+    }
+
+    .months .month {
+        padding: 4px 5px 3px 5px;
+        width: 130px;
+        text-align: center;
+    }
+
+    .months .control {
+        width: 23px;
+    }
+
+    .gridlines {
+        padding: 0 23px 5px 23px;
+    }
+
+    .gridline {
+        display: inline-block;
+        border: none;
+        width: 7 * @rangepicker-calendar-cell-width;
+    }
+
+    .cell {
+        width: @rangepicker-calendar-cell-width;
+        height: @rangepicker-calendar-cell-height;
+        line-height: @rangepicker-calendar-cell-line-height;
+    }
+
+    .days {
+        height: @rangepicker-calendar-cell-width;
+        font-weight: bold;
+    }
+
+    .week {
+        width: 7 * @rangepicker-calendar-cell-width;
+        height: @rangepicker-calendar-cell-height;
+    }
 }

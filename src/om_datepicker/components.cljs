@@ -130,23 +130,24 @@
                                               #(monthpicker-change-month cursor owner d/next-month result-ch))} "")))))))
 
 (defn- calendar-cell
-  [cursor owner]
+  [{:keys [allowed? class date text]} owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [highlighted]}]
       (let [select-ch (om/get-shared owner :select-ch)
-            allowed?  (:allowed? cursor)
+            allowed?  (and (not (nil? text))
+                           allowed?)
             touch-fn  (when allowed?
                         (fn []
                           (om/set-state! owner :highlighted nil)
-                          (put! select-ch (:date cursor))))]
-        (dom/div #js {:className    (str (:class cursor) (when highlighted " highlighted"))
+                          (put! select-ch date)))]
+        (dom/div #js {:className    (str class (when highlighted " highlighted"))
                       :onClick      touch-fn
                       :onTouchStart touch-fn
                       :onMouseEnter (when allowed?
                                       #(om/set-state! owner :highlighted true))
                       :onMouseLeave (when allowed?
-                                      #(om/set-state! owner :highlighted nil))} (:text cursor))))))
+                                      #(om/set-state! owner :highlighted nil))} text)))))
 
 (defn datepicker-panel
   "Creates a date-picker panel component.
@@ -316,3 +317,143 @@
                                                             :first-day   first-day
                                                             :result-ch   select-ch
                                                             :style       style}}))))))))
+
+;; TODO: rename
+(defn- range-date
+  [date]
+  (str (get (:short months) (.getMonth date)) " " (.getDate date) ", " (.getFullYear date)))
+
+(defn- month-cell
+  [{:keys [lable value]} owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "month"}
+               lable))))
+
+(defn- generate-month-gridline
+  [month-date selection-start selection-end start-date end-date first-day]
+  (let [sliding-date (calendar-start-date month-date first-day)]
+    (for [week (range 6)
+          day  (range 7)]
+      (let [sliding-date (d/switch-date! sliding-date 1)
+            allowed?     (and (or (nil? start-date)
+                                  (after? sliding-date start-date))
+                              (or (nil? end-date)
+                                  (before? sliding-date end-date)))
+            day          (.getDay sliding-date)
+            same-month?  (= (.getMonth month-date) (.getMonth sliding-date))]
+        {:class    (str "cell"
+                        (when-not allowed?
+v                          " disabled")
+                        (when (and (after? sliding-date selection-start)
+                                   (before? sliding-date selection-end))
+                          " selected")
+                        (when same-month?
+                          " instant")
+                        (when (or (= day 0) (= day 6))
+                          " weekend"))
+         :allowed? allowed?
+         :date     (d/date-instance sliding-date)
+         :text     (when same-month?
+                     (.getDate sliding-date))}))))
+
+(defn- gridline
+  [{:keys [value selection-start selection-end]} owner {:keys [allow-past? end-date first-day only-this-month? result-ch style]
+                                                        :or   {allow-past? true first-day 1 style :short}
+                                                        :as   opts}]
+  (reify
+    om/IRenderState
+    (render-state [_ _]
+      (let [calendar (generate-month-gridline value selection-start selection-end (when-not allow-past? (d/today)) end-date first-day)]
+        (apply dom/div #js {:className "gridline"}
+                 ;; day names
+                 (apply dom/div #js {:className "days"}
+                        (let [days (take 7 (drop first-day (cycle (get days :short))))]
+                          (for [day days]
+                            (dom/div #js {:className "cell"} day))))
+                 (for [week (partition 7 calendar)]
+                   (apply dom/div #js {:className "week"}
+                          (for [day week]
+                            (om/build calendar-cell day
+                                      {:shared {:select-ch select-ch}})))))))))
+
+(defn- generate-months-range
+  [date]
+  (->> date
+      (d/first-of-month)
+      (d/previous-month)
+      (iterate d/next-month)
+      (take 3)
+      (map (fn [month]
+             {:lable (str (get-in months [:long (.getMonth month)]) " " (.getFullYear month))
+              :value month}))))
+
+(defn rangepicker
+  [cursor owner {:keys [allow-past? end-date first-day]
+                 :or   {allow-past? true first-day 1}
+                 :as   opts}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:expanded  false
+       :start     (get cursor :start (d/today))
+       :end       (get cursor :end (d/today))
+       :select-ch (chan (sliding-buffer 1))
+       :kill-ch   (chan (sliding-buffer 1))})
+
+    om/IRenderState
+    (render-state [_ {:keys [expanded highlighted mode start end]
+                      :or   {mode :start}}]
+      (let [selected-date (if (= mode :start) start end)
+            months-range  (generate-months-range selected-date)]
+        (dom/div #js {:className "rangepicker"}
+                 (dom/input #js {:type         "text"
+                                 :readOnly     "readonly"
+                                 :value        (str (range-date (:start cursor)) " - " (range-date (:end cursor)))
+                                 :className    (str "rangepicker-input" (when highlighted
+                                                                          " highlighted"))
+                                 :onClick      #(om/update-state! owner :expanded (fn [v]
+                                                                                    (if v false true)))
+                                 :onMouseEnter #(om/set-state! owner :highlighted true)
+                                 :onMouseLeave #(om/set-state! owner :highlighted nil)})
+                 (dom/div #js {:className "rangepicker-popup"
+                               :style #js {:display (if expanded "block" "none")}}
+                          (dom/div #js {:className "rangepicker-popup-inner"}
+                                   (dom/div #js {:className "rangepicker-popup-content"}
+                                            (dom/div #js {:className "controls-panel"}
+                                                     (dom/div #js {:className "inputs-panel"}
+                                                              (dom/input #js {:type      "text"
+                                                                              :readOnly  "readonly"
+                                                                              :value     (range-date start)
+                                                                              :className (str "daterange-input"
+                                                                                              (when (= mode :start) " highlighted"))
+                                                                              :onClick   #(om/set-state! owner :mode :start)})
+                                                              " - "
+                                                              (dom/input #js {:type      "text"
+                                                                              :readOnly  "readonly"
+                                                                              :value     (range-date end)
+                                                                              :className (str "daterange-input"
+                                                                                              (when (= mode :end) " highlighted"))
+                                                                              :onClick   #(om/set-state! owner :mode :end)}))
+                                                     (dom/div #js {:className "buttons-panel"}
+                                                              (dom/span #js {:className "button"}
+                                                                        "Apply")
+                                                              (dom/span #js {:className "button"}
+                                                                        "Cancel")))
+                                            (dom/div #js {:className "calendar-panel"}
+                                                     (apply dom/div #js {:className "months navigation"}
+                                                            ;; TODO: can it be simpler?
+                                                            (concat
+                                                             [(dom/div #js {:className "control left"})]
+                                                             (om/build-all month-cell months-range)
+                                                             [(dom/div #js {:className "control right"})]))
+                                                     (apply dom/div #js {:className "gridlines"}
+                                                            (for [month months-range]
+                                                              (om/build gridline {:value           (:value month)
+                                                                                  :selection-start start
+                                                                                  :selection-end   end}
+                                                                        {:opts {:allow-past? allow-past?
+                                                                                :end-date    end-date
+                                                                                :first-day   first-day}}))))
+                                            ))))))))
