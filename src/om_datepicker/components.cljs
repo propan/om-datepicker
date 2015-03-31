@@ -403,10 +403,11 @@ v                          " disabled")
        :kill-ch   (chan (sliding-buffer 1))})
 
     om/IRenderState
-    (render-state [_ {:keys [expanded highlighted mode start end]
+    (render-state [_ {:keys [expanded highlighted grid-date mode start end]
                       :or   {mode :start}}]
-      (let [selected-date (if (= mode :start) start end)
-            months-range  (generate-months-range selected-date)]
+      (let [grid-date    (or grid-date
+                             (if (= mode :start) start end))
+            months-range (generate-months-range grid-date)]
         (dom/div #js {:className "rangepicker"}
                  (dom/input #js {:type         "text"
                                  :readOnly     "readonly"
@@ -445,9 +446,11 @@ v                          " disabled")
                                                      (apply dom/div #js {:className "months navigation"}
                                                             ;; TODO: can it be simpler?
                                                             (concat
-                                                             [(dom/div #js {:className "control left"})]
+                                                             [(dom/div #js {:className "control left"
+                                                                            :onClick   #(om/set-state! owner :grid-date (d/previous-month grid-date))})]
                                                              (om/build-all month-cell months-range)
-                                                             [(dom/div #js {:className "control right"})]))
+                                                             [(dom/div #js {:className "control right"
+                                                                            :onClick   #(om/set-state! owner :grid-date (d/next-month grid-date))})]))
                                                      (apply dom/div #js {:className "gridlines"}
                                                             (for [month months-range]
                                                               (om/build gridline {:value           (:value month)
