@@ -3,7 +3,7 @@
   (:require [cljs.core.async :as async :refer [chan put! sliding-buffer]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [om-datepicker.dates :as d :refer [after? before? is-future?]]
+            [om-datepicker.dates :as d :refer [after? before? between? is-future?]]
             [om-datepicker.events :refer [mouse-click]]))
 
 (def days
@@ -332,22 +332,22 @@
                lable))))
 
 (defn- generate-month-gridline
-  [month-date selection-start selection-end start-date end-date first-day]
+  [month-date selection-start selection-end min-date max-date first-day]
   (let [sliding-date (calendar-start-date month-date first-day)]
     (for [week (range 6)
           day  (range 7)]
       (let [sliding-date (d/switch-date! sliding-date 1)
-            allowed?     (and (or (nil? start-date)
-                                  (after? sliding-date start-date))
-                              (or (nil? end-date)
-                                  (before? sliding-date end-date)))
+            allowed?     (and (or (nil? min-date)
+                                  (before? min-date sliding-date))
+                              (or (nil? max-date)
+                                  (before? sliding-date max-date)))
             day          (.getDay sliding-date)
             same-month?  (= (.getMonth month-date) (.getMonth sliding-date))]
         {:class    (str "cell"
                         (when-not allowed?
-v                          " disabled")
-                        (when (and (after? sliding-date selection-start)
-                                   (before? sliding-date selection-end))
+                          " disabled")
+                        (when (and same-month?
+                                   (between? sliding-date selection-start selection-end))
                           " selected")
                         (when same-month?
                           " instant")
@@ -359,13 +359,13 @@ v                          " disabled")
                      (.getDate sliding-date))}))))
 
 (defn- gridline
-  [{:keys [value selection-start selection-end]} owner {:keys [allow-past? end-date first-day only-this-month? result-ch style]
-                                                        :or   {allow-past? true first-day 1 style :short}
-                                                        :as   opts}]
+  [{:keys [value min-date max-date selection-start selection-end]} owner {:keys [first-day select-ch style]
+                                                                          :or   {first-day 1 style :short}
+                                                                          :as   opts}]
   (reify
-    om/IRenderState
-    (render-state [_ _]
-      (let [calendar (generate-month-gridline value selection-start selection-end (when-not allow-past? (d/today)) end-date first-day)]
+    om/IRender
+    (render [_]
+      (let [calendar (generate-month-gridline value selection-start selection-end min-date max-date first-day)]
         (apply dom/div #js {:className "gridline"}
                  ;; day names
                  (apply dom/div #js {:className "days"}
@@ -397,14 +397,39 @@ v                          " disabled")
     om/IInitState
     (init-state [_]
       {:expanded  false
+       :mode      :start
        :start     (get cursor :start (d/today))
        :end       (get cursor :end (d/today))
        :select-ch (chan (sliding-buffer 1))
        :kill-ch   (chan (sliding-buffer 1))})
 
+    om/IWillMount
+    (will-mount [_]
+      (let [{:keys [kill-ch select-ch]} (om/get-state owner)]
+        (go-loop []
+                 (let [[v ch] (alts! [kill-ch select-ch] :priority true)]
+                   (condp = ch
+                     select-ch (let [mode (:mode (om/get-state owner))]
+                                 (if (= :start mode)
+                                   (doto owner
+                                     (om/set-state! :start v)
+                                     (om/set-state! :mode :end)
+                                     (om/update-state! :end #(if (before? % v) v %)))
+                                   (doto owner
+                                     (om/set-state! :end v)
+                                     (om/set-state! :mode :start)))
+                                 (recur))
+                     kill-ch   (do
+                                 (async/close! select-ch)
+                                 (async/close! kill-ch))
+                     nil)))))
+
+    om/IWillUnmount
+    (will-unmount [_]
+      (put! (om/get-state owner :kill-ch) true))
+
     om/IRenderState
-    (render-state [_ {:keys [expanded highlighted grid-date mode start end]
-                      :or   {mode :start}}]
+    (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch]}]
       (let [grid-date    (or grid-date
                              (if (= mode :start) start end))
             months-range (generate-months-range grid-date)]
@@ -454,9 +479,13 @@ v                          " disabled")
                                                      (apply dom/div #js {:className "gridlines"}
                                                             (for [month months-range]
                                                               (om/build gridline {:value           (:value month)
+                                                                                  :min-date        (if (= mode :end)
+                                                                                                     start
+                                                                                                     (when-not allow-past?
+                                                                                                       (d/today)))
+                                                                                  :max-date        end-date
                                                                                   :selection-start start
                                                                                   :selection-end   end}
-                                                                        {:opts {:allow-past? allow-past?
-                                                                                :end-date    end-date
-                                                                                :first-day   first-day}}))))
+                                                                        {:opts {:first-day first-day
+                                                                                :select-ch select-ch}}))))
                                             ))))))))
