@@ -1,13 +1,14 @@
 (ns om-datepicker.examples.app
   (:require [om.core :as om :include-macros true]
-            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel rangepicker]]))
+            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel rangepicker]]
+            [om-datepicker.dates :refer [today]]))
 
 (defonce app-state
   (atom {:month-panel {}
-         :date-panel  {:value (js/Date.)}
-         :datepicker  {:value (js/Date.)}
-         :rangepicker {:start (js/Date.)
-                       :end   (js/Date.)}}))
+         :date-panel  {:value (today)}
+         :datepicker  {:value (today)}
+         :rangepicker {:start (today)
+                       :end   (today)}}))
 
 (enable-console-print!)
 

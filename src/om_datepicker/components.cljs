@@ -432,7 +432,9 @@
     (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch]}]
       (let [grid-date    (or grid-date
                              (if (= mode :start) start end))
-            months-range (generate-months-range grid-date)]
+            months-range (generate-months-range grid-date)
+            is-modified? (not (and (= start (:start cursor))
+                                   (= end   (:end cursor))))]
         (dom/div #js {:className "rangepicker"}
                  (dom/input #js {:type         "text"
                                  :readOnly     "readonly"
@@ -463,9 +465,22 @@
                                                                                               (when (= mode :end) " highlighted"))
                                                                               :onClick   #(om/set-state! owner :mode :end)}))
                                                      (dom/div #js {:className "buttons-panel"}
-                                                              (dom/span #js {:className "button"}
+                                                              (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
+                                                                             :onClick   (when is-modified?
+                                                                                          #(do
+                                                                                             (doto owner
+                                                                                               (om/set-state! :expanded false)
+                                                                                               (om/set-state! :mode :start))
+                                                                                             (doto cursor
+                                                                                               (om/update! [:start] start)
+                                                                                               (om/update! [:end] end))))}
                                                                         "Apply")
-                                                              (dom/span #js {:className "button"}
+                                                              (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
+                                                                             :onClick   (when is-modified?
+                                                                                          #(doto owner
+                                                                                             (om/set-state! :mode :start)
+                                                                                             (om/set-state! :start (:start cursor))
+                                                                                             (om/set-state! :end   (:end cursor))))}
                                                                         "Cancel")))
                                             (dom/div #js {:className "calendar-panel"}
                                                      (apply dom/div #js {:className "months navigation"}
