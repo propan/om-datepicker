@@ -1,5 +1,15 @@
 (ns om-datepicker.dates)
 
+(defn leap-year?
+  [year]
+  (or (and (= 0 (mod year 4))
+           (not (= 0 (mod year 100))))
+      (= 0 (mod year 400))))
+
+(defn days-in-month
+  [year month]
+  (get [31 (if (leap-year? year) 29 28) 31 30 31 30 31 31 30 31 30 31] month))
+
 (defn date-instance
   [date]
   (js/Date. (.getFullYear date) (.getMonth date) (.getDate date)))
@@ -12,6 +22,12 @@
   [date]
   (js/Date. (.getFullYear date) (.getMonth date) 1))
 
+(defn last-of-month
+  [date]
+  (let [year (.getFullYear date)
+        month (.getMonth date)]
+    (js/Date. year month (days-in-month year month))))
+
 (defn- switch-date!
   [date offset]
   (.setDate date (+ (.getDate date) offset))
@@ -20,16 +36,6 @@
 (defn current-month
   []
   (first-of-month (js/Date.)))
-
-(defn leap-year?
-  [year]
-  (or (and (= 0 (mod year 4))
-           (not (= 0 (mod year 100))))
-      (= 0 (mod year 400))))
-
-(defn days-in-month
-  [year month]
-  (get [31 (if (leap-year? year) 29 28) 31 30 31 30 31 31 30 31 30 31] month))
 
 (defn add-months
   [date months]

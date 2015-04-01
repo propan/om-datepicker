@@ -324,11 +324,12 @@
   (str (get (:short months) (.getMonth date)) " " (.getDate date) ", " (.getFullYear date)))
 
 (defn- month-cell
-  [{:keys [lable value]} owner]
+  [{:keys [lable value]} owner {:keys [select-ch]}]
   (reify
     om/IRender
     (render [_]
-      (dom/div #js {:className "month"}
+      (dom/div #js {:className "month"
+                    :onClick    #(put! select-ch value)}
                lable))))
 
 (defn- generate-month-gridline
@@ -396,38 +397,46 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:expanded       false
-       :mode           :start
-       :start          (get cursor :start (d/today))
-       :end            (get cursor :end (d/today))
-       :mouse-click-ch (mouse-click)
-       :select-ch      (chan (sliding-buffer 1))
-       :kill-ch        (chan (sliding-buffer 1))})
+      {:expanded        false
+       :mode            :start
+       :start           (get cursor :start (d/today))
+       :end             (get cursor :end (d/today))
+       :mouse-click-ch  (mouse-click)
+       :month-select-ch (chan (sliding-buffer 1))
+       :select-ch       (chan (sliding-buffer 1))
+       :kill-ch         (chan (sliding-buffer 1))})
 
     om/IWillMount
     (will-mount [_]
-      (let [{:keys [kill-ch mouse-click-ch select-ch]} (om/get-state owner)]
+      (let [{:keys [kill-ch mouse-click-ch month-select-ch select-ch]} (om/get-state owner)]
         (go-loop []
-                 (let [[v ch] (alts! [kill-ch mouse-click-ch select-ch] :priority true)]
+                 (let [[v ch] (alts! [kill-ch mouse-click-ch month-select-ch select-ch] :priority true)]
                    (condp = ch
-                     mouse-click-ch (let [n (om/get-node owner)]
-                                      (when-not (.contains n (.-target v))
-                                        (om/set-state! owner :expanded false))
-                                      (recur))
-                     select-ch      (let [mode (:mode (om/get-state owner))]
-                                      (if (= :start mode)
-                                        (doto owner
-                                          (om/set-state! :start v)
-                                          (om/set-state! :mode :end)
-                                          (om/update-state! :end #(if (before? % v) v %)))
-                                        (doto owner
-                                          (om/set-state! :end v)
-                                          (om/set-state! :mode :start)))
-                                      (recur))
-                     kill-ch        (do
-                                      (async/close! mouse-click-ch)
-                                      (async/close! select-ch)
-                                      (async/close! kill-ch))
+                     month-select-ch (do
+                                       (doto owner
+                                         (om/set-state! :start (d/first-of-month v))
+                                         (om/set-state! :end   (d/last-of-month v))
+                                         (om/set-state! :mode :start))
+                                       (recur))
+                     mouse-click-ch  (let [n (om/get-node owner)]
+                                       (when-not (.contains n (.-target v))
+                                         (om/set-state! owner :expanded false))
+                                       (recur))
+                     select-ch       (let [mode (:mode (om/get-state owner))]
+                                       (if (= :start mode)
+                                         (doto owner
+                                           (om/set-state! :start v)
+                                           (om/set-state! :mode :end)
+                                           (om/update-state! :end #(if (before? % v) v %)))
+                                         (doto owner
+                                           (om/set-state! :end v)
+                                           (om/set-state! :mode :start)))
+                                       (recur))
+                     kill-ch         (do
+                                       (async/close! month-select-ch)
+                                       (async/close! mouse-click-ch)
+                                       (async/close! select-ch)
+                                       (async/close! kill-ch))
                      nil)))))
 
     om/IWillUnmount
@@ -435,7 +444,7 @@
       (put! (om/get-state owner :kill-ch) true))
 
     om/IRenderState
-    (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch]}]
+    (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch month-select-ch]}]
       (let [grid-date    (or grid-date
                              (if (= mode :start) start end))
             months-range (generate-months-range grid-date)
@@ -494,7 +503,8 @@
                                                             (concat
                                                              [(dom/div #js {:className "control left"
                                                                             :onClick   #(om/set-state! owner :grid-date (d/previous-month grid-date))})]
-                                                             (om/build-all month-cell months-range)
+                                                             (om/build-all month-cell months-range
+                                                                           {:opts {:select-ch month-select-ch}})
                                                              [(dom/div #js {:className "control right"
                                                                             :onClick   #(om/set-state! owner :grid-date (d/next-month grid-date))})]))
                                                      (apply dom/div #js {:className "gridlines"}
