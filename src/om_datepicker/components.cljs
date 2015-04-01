@@ -396,32 +396,38 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:expanded  false
-       :mode      :start
-       :start     (get cursor :start (d/today))
-       :end       (get cursor :end (d/today))
-       :select-ch (chan (sliding-buffer 1))
-       :kill-ch   (chan (sliding-buffer 1))})
+      {:expanded       false
+       :mode           :start
+       :start          (get cursor :start (d/today))
+       :end            (get cursor :end (d/today))
+       :mouse-click-ch (mouse-click)
+       :select-ch      (chan (sliding-buffer 1))
+       :kill-ch        (chan (sliding-buffer 1))})
 
     om/IWillMount
     (will-mount [_]
-      (let [{:keys [kill-ch select-ch]} (om/get-state owner)]
+      (let [{:keys [kill-ch mouse-click-ch select-ch]} (om/get-state owner)]
         (go-loop []
-                 (let [[v ch] (alts! [kill-ch select-ch] :priority true)]
+                 (let [[v ch] (alts! [kill-ch mouse-click-ch select-ch] :priority true)]
                    (condp = ch
-                     select-ch (let [mode (:mode (om/get-state owner))]
-                                 (if (= :start mode)
-                                   (doto owner
-                                     (om/set-state! :start v)
-                                     (om/set-state! :mode :end)
-                                     (om/update-state! :end #(if (before? % v) v %)))
-                                   (doto owner
-                                     (om/set-state! :end v)
-                                     (om/set-state! :mode :start)))
-                                 (recur))
-                     kill-ch   (do
-                                 (async/close! select-ch)
-                                 (async/close! kill-ch))
+                     mouse-click-ch (let [n (om/get-node owner)]
+                                      (when-not (.contains n (.-target v))
+                                        (om/set-state! owner :expanded false))
+                                      (recur))
+                     select-ch      (let [mode (:mode (om/get-state owner))]
+                                      (if (= :start mode)
+                                        (doto owner
+                                          (om/set-state! :start v)
+                                          (om/set-state! :mode :end)
+                                          (om/update-state! :end #(if (before? % v) v %)))
+                                        (doto owner
+                                          (om/set-state! :end v)
+                                          (om/set-state! :mode :start)))
+                                      (recur))
+                     kill-ch        (do
+                                      (async/close! mouse-click-ch)
+                                      (async/close! select-ch)
+                                      (async/close! kill-ch))
                      nil)))))
 
     om/IWillUnmount
