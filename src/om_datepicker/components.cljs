@@ -128,7 +128,7 @@
         (apply dom/div #js {:className "gridline"}
                ;; day names
                (apply dom/div #js {:className "days"}
-                      (let [days (take 7 (drop first-day (cycle (get days :short))))]
+                      (let [days (take 7 (drop first-day (cycle (get days style))))]
                         (for [day days]
                           (dom/div #js {:className "cell"} day))))
                (for [week (partition 7 calendar)]
