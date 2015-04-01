@@ -25,30 +25,32 @@
     (.setDate month-date (- (.getDate month-date) offset))
     month-date))
 
-(defn- generate-calendar
-  [date selected-date allow-past? end-date first-day]
-  (let [today        (d/today)
-        sliding-date (calendar-start-date date first-day)]
+(defn- generate-month-gridline
+  [month-date selection-start selection-end min-date max-date first-day current-only?]
+  (let [sliding-date (calendar-start-date month-date first-day)]
     (for [week (range 6)
           day  (range 7)]
       (let [sliding-date (d/switch-date! sliding-date 1)
-            allowed?     (and (or allow-past?
-                                  (after? sliding-date today))
-                              (or (nil? end-date)
-                                  (before? sliding-date end-date)))
-            day          (.getDay sliding-date)]
+            allowed?     (and (or (nil? min-date)
+                                  (before? min-date sliding-date))
+                              (or (nil? max-date)
+                                  (before? sliding-date max-date)))
+            day          (.getDay sliding-date)
+            same-month?  (= (.getMonth month-date) (.getMonth sliding-date))]
         {:class    (str "cell"
                         (when-not allowed?
                           " disabled")
-                        (when (= sliding-date selected-date)
+                        (when (and same-month?
+                                   (between? sliding-date selection-start selection-end))
                           " selected")
-                        (when (= (.getMonth date) (.getMonth sliding-date))
+                        (when same-month?
                           " instant")
                         (when (or (= day 0) (= day 6))
                           " weekend"))
          :allowed? allowed?
          :date     (d/date-instance sliding-date)
-         :text     (.getDate sliding-date)}))))
+         :text     (when (or same-month? (not current-only?))
+                     (.getDate sliding-date))}))))
 
 (defn- month-panel-label
   [date]
@@ -211,7 +213,7 @@
       om/IRenderState
       (render-state [_ {:keys [month-change-ch select-ch value]}]
         (let [selected (:value cursor)
-              calendar (generate-calendar value selected allow-past? end-date first-day)]
+              calendar (generate-month-gridline value selected selected (when-not allow-past? (d/today)) end-date first-day false)]
           (apply dom/div #js {:className "gridline"}
                  (om/build monthpicker-panel
                            {:value value}
@@ -332,33 +334,6 @@
                     :onClick    #(put! select-ch value)}
                lable))))
 
-(defn- generate-month-gridline
-  [month-date selection-start selection-end min-date max-date first-day]
-  (let [sliding-date (calendar-start-date month-date first-day)]
-    (for [week (range 6)
-          day  (range 7)]
-      (let [sliding-date (d/switch-date! sliding-date 1)
-            allowed?     (and (or (nil? min-date)
-                                  (before? min-date sliding-date))
-                              (or (nil? max-date)
-                                  (before? sliding-date max-date)))
-            day          (.getDay sliding-date)
-            same-month?  (= (.getMonth month-date) (.getMonth sliding-date))]
-        {:class    (str "cell"
-                        (when-not allowed?
-                          " disabled")
-                        (when (and same-month?
-                                   (between? sliding-date selection-start selection-end))
-                          " selected")
-                        (when same-month?
-                          " instant")
-                        (when (or (= day 0) (= day 6))
-                          " weekend"))
-         :allowed? allowed?
-         :date     (d/date-instance sliding-date)
-         :text     (when same-month?
-                     (.getDate sliding-date))}))))
-
 (defn- gridline
   [{:keys [value min-date max-date selection-start selection-end]} owner {:keys [first-day select-ch style]
                                                                           :or   {first-day 1 style :short}
@@ -366,7 +341,7 @@
   (reify
     om/IRender
     (render [_]
-      (let [calendar (generate-month-gridline value selection-start selection-end min-date max-date first-day)]
+      (let [calendar (generate-month-gridline value selection-start selection-end min-date max-date first-day true)]
         (apply dom/div #js {:className "gridline"}
                  ;; day names
                  (apply dom/div #js {:className "days"}
