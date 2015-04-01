@@ -16,6 +16,27 @@
    :long  ["January" "February" "March" "April" "May" "June"
            "July" "August" "September" "October" "November" "December"]})
 
+;;
+;; Date Formatting
+;;
+
+(defn- to-month-format
+  [date]
+  (str (get (:long months) (.getMonth date)) " " (.getFullYear date)))
+
+(defn- to-day-format
+  [date style]
+  (let [labels (get days style)]
+    (str (get labels (.getDay date)) ", " (.getDate date) " " (get (:short months) (.getMonth date)))))
+
+(defn- to-date-format
+  [date]
+  (str (get (:short months) (.getMonth date)) " " (.getDate date) ", " (.getFullYear date)))
+
+;;
+;; Grid Generation
+;;
+
 (defn- calendar-start-date
   [month-date first-day]
   (let [month-date (doto (js/Date. month-date) (.setDate 1))
@@ -26,7 +47,7 @@
     month-date))
 
 (defn- generate-month-gridline
-  [month-date selection-start selection-end min-date max-date first-day current-only?]
+  [month-date selection-start selection-end min-date max-date first-day instant-only?]
   (let [sliding-date (calendar-start-date month-date first-day)]
     (for [week (range 6)
           day  (range 7)]
@@ -49,12 +70,76 @@
                           " weekend"))
          :allowed? allowed?
          :date     (d/date-instance sliding-date)
-         :text     (when (or same-month? (not current-only?))
+         :text     (when (or same-month? (not instant-only?))
                      (.getDate sliding-date))}))))
 
-(defn- month-panel-label
+(defn- generate-months-range
   [date]
-  (str (get (:long months) (.getMonth date)) " " (.getFullYear date)))
+  (->> date
+       (d/first-of-month)
+       (d/previous-month)
+       (iterate d/next-month)
+       (take 3)
+       (map (fn [month]
+              {:lable (str (get-in months [:long (.getMonth month)]) " " (.getFullYear month))
+               :value month}))))
+
+;;
+;; Sub-Components
+;;
+
+(defn- calendar-cell
+  [{:keys [allowed? class date text]} owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [highlighted]}]
+      (let [select-ch (om/get-shared owner :select-ch)
+            allowed?  (and (not (nil? text))
+                           allowed?)
+            touch-fn  (when allowed?
+                        (fn []
+                          (om/set-state! owner :highlighted nil)
+                          (put! select-ch date)))]
+        (dom/div #js {:className    (str class (when highlighted " highlighted"))
+                      :onClick      touch-fn
+                      :onTouchStart touch-fn
+                      :onMouseEnter (when allowed?
+                                      #(om/set-state! owner :highlighted true))
+                      :onMouseLeave (when allowed?
+                                      #(om/set-state! owner :highlighted nil))} text)))))
+
+(defn- month-cell
+  [{:keys [lable value]} owner {:keys [select-ch]}]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:className "month"
+                    :onClick    #(put! select-ch value)}
+               lable))))
+
+(defn- gridline
+  [{:keys [value min-date max-date selection-start selection-end]} owner {:keys [first-day instant-only? select-ch style]
+                                                                          :or   {first-day 1 instant-only? false style :short}
+                                                                          :as   opts}]
+  (reify
+    om/IRender
+    (render [_]
+      (let [calendar (generate-month-gridline value selection-start selection-end min-date max-date first-day instant-only?)]
+        (apply dom/div #js {:className "gridline"}
+               ;; day names
+               (apply dom/div #js {:className "days"}
+                      (let [days (take 7 (drop first-day (cycle (get days :short))))]
+                        (for [day days]
+                          (dom/div #js {:className "cell"} day))))
+               (for [week (partition 7 calendar)]
+                 (apply dom/div #js {:className "week"}
+                        (for [day week]
+                          (om/build calendar-cell day
+                                    {:shared {:select-ch select-ch}})))))))))
+
+;;
+;;
+;;
 
 (defn- monthpicker-change-month
   [cursor owner change-fn result-ch]
@@ -126,30 +211,10 @@
                    (dom/div #js {:className (str "control left" (when-not can-go-back? " disabled"))
                                  :onClick   (when can-go-back?
                                               #(monthpicker-change-month cursor owner d/previous-month result-ch))} "")
-                   (dom/div #js {:className "label"} (month-panel-label value))
+                   (dom/div #js {:className "label"} (to-month-format value))
                    (dom/div #js {:className (str "control right" (when-not can-go-forward? " disabled"))
                                  :onClick   (when can-go-forward?
                                               #(monthpicker-change-month cursor owner d/next-month result-ch))} "")))))))
-
-(defn- calendar-cell
-  [{:keys [allowed? class date text]} owner]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [highlighted]}]
-      (let [select-ch (om/get-shared owner :select-ch)
-            allowed?  (and (not (nil? text))
-                           allowed?)
-            touch-fn  (when allowed?
-                        (fn []
-                          (om/set-state! owner :highlighted nil)
-                          (put! select-ch date)))]
-        (dom/div #js {:className    (str class (when highlighted " highlighted"))
-                      :onClick      touch-fn
-                      :onTouchStart touch-fn
-                      :onMouseEnter (when allowed?
-                                      #(om/set-state! owner :highlighted true))
-                      :onMouseLeave (when allowed?
-                                      #(om/set-state! owner :highlighted nil))} text)))))
 
 (defn datepicker-panel
   "Creates a date-picker panel component.
@@ -212,30 +277,21 @@
 
       om/IRenderState
       (render-state [_ {:keys [month-change-ch select-ch value]}]
-        (let [selected (:value cursor)
-              calendar (generate-month-gridline value selected selected (when-not allow-past? (d/today)) end-date first-day false)]
-          (apply dom/div #js {:className "gridline"}
+        (let [selected (:value cursor)]
+          (dom/div #js {:className "gridline-wrapper"}
                  (om/build monthpicker-panel
                            {:value value}
                            {:opts {:allow-past? allow-past?
                                    :end-date    end-date
                                    :result-ch   month-change-ch}})
-                 ;; day names
-                 (apply dom/div #js {:className "days"}
-                        (let [days (take 7 (drop first-day (cycle (get days style))))]
-                          (for [day days]
-                            (dom/div #js {:className "cell"} day))))
-                 ;; calendar grid
-                 (for [week (partition 7 calendar)]
-                   (apply dom/div #js {:className "week"}
-                          (for [day week]
-                            (om/build calendar-cell day
-                                      {:shared {:select-ch select-ch}}))))))))))
-
-(defn- datepicker-label
-  [date style]
-  (let [labels (get days style)]
-    (str (get labels (.getDay date)) ", " (.getDate date) " " (get (:short months) (.getMonth date)))))
+                 (om/build gridline {:value           value
+                                     :min-date        (when-not allow-past? (d/today))
+                                     :max-date        end-date
+                                     :selection-start selected
+                                     :selection-end   selected}
+                           {:opts {:first-day     first-day
+                                   :select-ch     select-ch
+                                   :style         style}})))))))
 
 (defn datepicker
   "Creates a date-picker component.
@@ -301,7 +357,7 @@
       (dom/div #js {:className "datepicker"}
                (dom/input #js {:type         "text"
                                :readOnly     "readonly"
-                               :value        (datepicker-label (:value cursor) :long)
+                               :value        (to-day-format (:value cursor) :long)
                                :className    (str "datepicker-input" (when highlighted
                                                                   " highlighted"))
                                :onClick      #(om/update-state! owner :expanded (fn [v]
@@ -319,51 +375,6 @@
                                                             :first-day   first-day
                                                             :result-ch   select-ch
                                                             :style       style}}))))))))
-
-;; TODO: rename
-(defn- range-date
-  [date]
-  (str (get (:short months) (.getMonth date)) " " (.getDate date) ", " (.getFullYear date)))
-
-(defn- month-cell
-  [{:keys [lable value]} owner {:keys [select-ch]}]
-  (reify
-    om/IRender
-    (render [_]
-      (dom/div #js {:className "month"
-                    :onClick    #(put! select-ch value)}
-               lable))))
-
-(defn- gridline
-  [{:keys [value min-date max-date selection-start selection-end]} owner {:keys [first-day select-ch style]
-                                                                          :or   {first-day 1 style :short}
-                                                                          :as   opts}]
-  (reify
-    om/IRender
-    (render [_]
-      (let [calendar (generate-month-gridline value selection-start selection-end min-date max-date first-day true)]
-        (apply dom/div #js {:className "gridline"}
-                 ;; day names
-                 (apply dom/div #js {:className "days"}
-                        (let [days (take 7 (drop first-day (cycle (get days :short))))]
-                          (for [day days]
-                            (dom/div #js {:className "cell"} day))))
-                 (for [week (partition 7 calendar)]
-                   (apply dom/div #js {:className "week"}
-                          (for [day week]
-                            (om/build calendar-cell day
-                                      {:shared {:select-ch select-ch}})))))))))
-
-(defn- generate-months-range
-  [date]
-  (->> date
-      (d/first-of-month)
-      (d/previous-month)
-      (iterate d/next-month)
-      (take 3)
-      (map (fn [month]
-             {:lable (str (get-in months [:long (.getMonth month)]) " " (.getFullYear month))
-              :value month}))))
 
 (defn rangepicker
   [cursor owner {:keys [allow-past? end-date first-day]
@@ -428,7 +439,7 @@
         (dom/div #js {:className "rangepicker"}
                  (dom/input #js {:type         "text"
                                  :readOnly     "readonly"
-                                 :value        (str (range-date (:start cursor)) " - " (range-date (:end cursor)))
+                                 :value        (str (to-date-format (:start cursor)) " - " (to-date-format (:end cursor)))
                                  :className    (str "rangepicker-input" (when highlighted
                                                                           " highlighted"))
                                  :onClick      #(om/update-state! owner :expanded (fn [v]
@@ -443,14 +454,14 @@
                                                      (dom/div #js {:className "inputs-panel"}
                                                               (dom/input #js {:type      "text"
                                                                               :readOnly  "readonly"
-                                                                              :value     (range-date start)
+                                                                              :value     (to-date-format start)
                                                                               :className (str "daterange-input"
                                                                                               (when (= mode :start) " highlighted"))
                                                                               :onClick   #(om/set-state! owner :mode :start)})
                                                               " - "
                                                               (dom/input #js {:type      "text"
                                                                               :readOnly  "readonly"
-                                                                              :value     (range-date end)
+                                                                              :value     (to-date-format end)
                                                                               :className (str "daterange-input"
                                                                                               (when (= mode :end) " highlighted"))
                                                                               :onClick   #(om/set-state! owner :mode :end)}))
@@ -492,6 +503,6 @@
                                                                                   :max-date        end-date
                                                                                   :selection-start start
                                                                                   :selection-end   end}
-                                                                        {:opts {:first-day first-day
-                                                                                :select-ch select-ch}}))))
-                                            ))))))))
+                                                                        {:opts {:first-day     first-day
+                                                                                :instant-only? true
+                                                                                :select-ch     select-ch}}))))))))))))
