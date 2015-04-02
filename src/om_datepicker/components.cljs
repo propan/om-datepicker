@@ -376,133 +376,151 @@
                                                             :result-ch   select-ch
                                                             :style       style}}))))))))
 
+(defn- corrected-month-start
+  [month-date min-date]
+  (let [start-date (d/first-of-month month-date)]
+    (cond
+     (nil? min-date)                     start-date
+     (before? min-date start-date)       start-date
+     (d/same-month? min-date start-date) min-date
+     :else                               nil)))
+
+(defn- corrected-month-end
+  [month-date max-date]
+  (let [end-date (d/last-of-month month-date)]
+    (cond
+     (nil? max-date)                   end-date
+     (before? end-date max-date)       end-date
+     (d/same-month? max-date end-date) max-date
+     :else                             nil)))
+
 (defn rangepicker
-  [cursor owner {:keys [allow-past? end-date first-day]
-                 :or   {allow-past? true first-day 1}
-                 :as   opts}]
-  (reify
-    om/IInitState
-    (init-state [_]
-      {:expanded        false
-       :mode            :start
-       :start           (get cursor :start (d/today))
-       :end             (get cursor :end (d/today))
-       :mouse-click-ch  (mouse-click)
-       :month-select-ch (chan (sliding-buffer 1))
-       :select-ch       (chan (sliding-buffer 1))
-       :kill-ch         (chan (sliding-buffer 1))})
+  [cursor owner {:keys [min-date max-date first-day]
+                 :or   {first-day 1}}]
+  (let [min-date (d/coerse-date min-date)
+        max-date (d/coerse-date max-date)]
+    (reify
+      om/IInitState
+      (init-state [_]
+        {:expanded        false
+         :mode            :start
+         :start           (get cursor :start (d/today))
+         :end             (get cursor :end (d/today))
+         :mouse-click-ch  (mouse-click)
+         :month-select-ch (chan (sliding-buffer 1))
+         :select-ch       (chan (sliding-buffer 1))
+         :kill-ch         (chan (sliding-buffer 1))})
 
-    om/IWillMount
-    (will-mount [_]
-      (let [{:keys [kill-ch mouse-click-ch month-select-ch select-ch]} (om/get-state owner)]
-        (go-loop []
-                 (let [[v ch] (alts! [kill-ch mouse-click-ch month-select-ch select-ch] :priority true)]
-                   (condp = ch
-                     month-select-ch (do
-                                       (doto owner
-                                         (om/set-state! :start (d/first-of-month v))
-                                         (om/set-state! :end   (d/last-of-month v))
-                                         (om/set-state! :mode :start))
-                                       (recur))
-                     mouse-click-ch  (let [n (om/get-node owner)]
-                                       (when-not (.contains n (.-target v))
-                                         (om/set-state! owner :expanded false))
-                                       (recur))
-                     select-ch       (let [mode (:mode (om/get-state owner))]
-                                       (if (= :start mode)
-                                         (doto owner
-                                           (om/set-state! :start v)
-                                           (om/set-state! :mode :end)
-                                           (om/update-state! :end #(if (before? % v) v %)))
-                                         (doto owner
-                                           (om/set-state! :end v)
-                                           (om/set-state! :mode :start)))
-                                       (recur))
-                     kill-ch         (do
-                                       (async/close! month-select-ch)
-                                       (async/close! mouse-click-ch)
-                                       (async/close! select-ch)
-                                       (async/close! kill-ch))
-                     nil)))))
+      om/IWillMount
+      (will-mount [_]
+        (let [{:keys [kill-ch mouse-click-ch month-select-ch select-ch]} (om/get-state owner)]
+          (go-loop []
+                   (let [[v ch] (alts! [kill-ch mouse-click-ch month-select-ch select-ch] :priority true)]
+                     (condp = ch
+                       month-select-ch (let [start-date (corrected-month-start v min-date)
+                                             end-date   (corrected-month-end v max-date)]
+                                         (when (and start-date end-date)
+                                           (doto owner
+                                             (om/set-state! :start start-date)
+                                             (om/set-state! :end   end-date)
+                                             (om/set-state! :mode  :start)))
+                                         (recur))
+                       mouse-click-ch  (let [n (om/get-node owner)]
+                                         (when-not (.contains n (.-target v))
+                                           (om/set-state! owner :expanded false))
+                                         (recur))
+                       select-ch       (let [mode (:mode (om/get-state owner))]
+                                         (if (= :start mode)
+                                           (doto owner
+                                             (om/set-state! :start v)
+                                             (om/set-state! :mode :end)
+                                             (om/update-state! :end #(if (before? % v) v %)))
+                                           (doto owner
+                                             (om/set-state! :end v)
+                                             (om/set-state! :mode :start)))
+                                         (recur))
+                       kill-ch         (do
+                                         (async/close! month-select-ch)
+                                         (async/close! mouse-click-ch)
+                                         (async/close! select-ch)
+                                         (async/close! kill-ch))
+                       nil)))))
 
-    om/IWillUnmount
-    (will-unmount [_]
-      (put! (om/get-state owner :kill-ch) true))
+      om/IWillUnmount
+      (will-unmount [_]
+        (put! (om/get-state owner :kill-ch) true))
 
-    om/IRenderState
-    (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch month-select-ch]}]
-      (let [grid-date    (or grid-date
-                             (if (= mode :start) start end))
-            months-range (generate-months-range grid-date)
-            is-modified? (not (and (= start (:start cursor))
-                                   (= end   (:end cursor))))]
-        (dom/div #js {:className "rangepicker"}
-                 (dom/input #js {:type         "text"
-                                 :readOnly     "readonly"
-                                 :value        (str (to-date-format (:start cursor)) " - " (to-date-format (:end cursor)))
-                                 :className    (str "rangepicker-input" (when highlighted
-                                                                          " highlighted"))
-                                 :onClick      #(om/update-state! owner :expanded (fn [v]
-                                                                                    (if v false true)))
-                                 :onMouseEnter #(om/set-state! owner :highlighted true)
-                                 :onMouseLeave #(om/set-state! owner :highlighted nil)})
-                 (dom/div #js {:className "rangepicker-popup"
-                               :style #js {:display (if expanded "block" "none")}}
-                          (dom/div #js {:className "rangepicker-popup-inner"}
-                                   (dom/div #js {:className "rangepicker-popup-content"}
-                                            (dom/div #js {:className "controls-panel"}
-                                                     (dom/div #js {:className "inputs-panel"}
-                                                              (dom/input #js {:type      "text"
-                                                                              :readOnly  "readonly"
-                                                                              :value     (to-date-format start)
-                                                                              :className (str "daterange-input"
-                                                                                              (when (= mode :start) " highlighted"))
-                                                                              :onClick   #(om/set-state! owner :mode :start)})
-                                                              " - "
-                                                              (dom/input #js {:type      "text"
-                                                                              :readOnly  "readonly"
-                                                                              :value     (to-date-format end)
-                                                                              :className (str "daterange-input"
-                                                                                              (when (= mode :end) " highlighted"))
-                                                                              :onClick   #(om/set-state! owner :mode :end)}))
-                                                     (dom/div #js {:className "buttons-panel"}
-                                                              (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
-                                                                             :onClick   (when is-modified?
-                                                                                          #(do
-                                                                                             (doto owner
-                                                                                               (om/set-state! :expanded false)
-                                                                                               (om/set-state! :mode :start))
-                                                                                             (doto cursor
-                                                                                               (om/update! [:start] start)
-                                                                                               (om/update! [:end] end))))}
-                                                                        "Apply")
-                                                              (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
-                                                                             :onClick   (when is-modified?
-                                                                                          #(doto owner
-                                                                                             (om/set-state! :mode :start)
-                                                                                             (om/set-state! :start (:start cursor))
-                                                                                             (om/set-state! :end   (:end cursor))))}
-                                                                        "Cancel")))
-                                            (dom/div #js {:className "calendar-panel"}
-                                                     (apply dom/div #js {:className "months navigation"}
-                                                            ;; TODO: can it be simpler?
-                                                            (concat
-                                                             [(dom/div #js {:className "control left"
-                                                                            :onClick   #(om/set-state! owner :grid-date (d/previous-month grid-date))})]
-                                                             (om/build-all month-cell months-range
-                                                                           {:opts {:select-ch month-select-ch}})
-                                                             [(dom/div #js {:className "control right"
-                                                                            :onClick   #(om/set-state! owner :grid-date (d/next-month grid-date))})]))
-                                                     (apply dom/div #js {:className "gridlines"}
-                                                            (for [month months-range]
-                                                              (om/build gridline {:value           (:value month)
-                                                                                  :min-date        (if (= mode :end)
-                                                                                                     start
-                                                                                                     (when-not allow-past?
-                                                                                                       (d/today)))
-                                                                                  :max-date        end-date
-                                                                                  :selection-start start
-                                                                                  :selection-end   end}
-                                                                        {:opts {:first-day     first-day
-                                                                                :instant-only? true
-                                                                                :select-ch     select-ch}}))))))))))))
+      om/IRenderState
+      (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch month-select-ch]}]
+        (let [grid-date    (or grid-date
+                               (if (= mode :start) start end))
+              months-range (generate-months-range grid-date)
+              is-modified? (not (and (= start (:start cursor))
+                                     (= end   (:end cursor))))]
+          (dom/div #js {:className "rangepicker"}
+                   (dom/input #js {:type         "text"
+                                   :readOnly     "readonly"
+                                   :value        (str (to-date-format (:start cursor)) " - " (to-date-format (:end cursor)))
+                                   :className    (str "rangepicker-input" (when highlighted
+                                                                            " highlighted"))
+                                   :onClick      #(om/update-state! owner :expanded (fn [v]
+                                                                                      (if v false true)))
+                                   :onMouseEnter #(om/set-state! owner :highlighted true)
+                                   :onMouseLeave #(om/set-state! owner :highlighted nil)})
+                   (dom/div #js {:className "rangepicker-popup"
+                                 :style #js {:display (if expanded "block" "none")}}
+                            (dom/div #js {:className "rangepicker-popup-inner"}
+                                     (dom/div #js {:className "rangepicker-popup-content"}
+                                              (dom/div #js {:className "controls-panel"}
+                                                       (dom/div #js {:className "inputs-panel"}
+                                                                (dom/input #js {:type      "text"
+                                                                                :readOnly  "readonly"
+                                                                                :value     (to-date-format start)
+                                                                                :className (str "daterange-input"
+                                                                                                (when (= mode :start) " highlighted"))
+                                                                                :onClick   #(om/set-state! owner :mode :start)})
+                                                                " - "
+                                                                (dom/input #js {:type      "text"
+                                                                                :readOnly  "readonly"
+                                                                                :value     (to-date-format end)
+                                                                                :className (str "daterange-input"
+                                                                                                (when (= mode :end) " highlighted"))
+                                                                                :onClick   #(om/set-state! owner :mode :end)}))
+                                                       (dom/div #js {:className "buttons-panel"}
+                                                                (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
+                                                                               :onClick   (when is-modified?
+                                                                                            #(do
+                                                                                               (doto owner
+                                                                                                 (om/set-state! :expanded false)
+                                                                                                 (om/set-state! :mode :start))
+                                                                                               (doto cursor
+                                                                                                 (om/update! [:start] start)
+                                                                                                 (om/update! [:end] end))))}
+                                                                          "Apply")
+                                                                (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
+                                                                               :onClick   (when is-modified?
+                                                                                            #(doto owner
+                                                                                               (om/set-state! :mode :start)
+                                                                                               (om/set-state! :start (:start cursor))
+                                                                                               (om/set-state! :end   (:end cursor))))}
+                                                                          "Cancel")))
+                                              (dom/div #js {:className "calendar-panel"}
+                                                       (apply dom/div #js {:className "months navigation"}
+                                                              ;; TODO: can it be simpler?
+                                                              (concat
+                                                               [(dom/div #js {:className "control left"
+                                                                              :onClick   #(om/set-state! owner :grid-date (d/previous-month grid-date))})]
+                                                               (om/build-all month-cell months-range
+                                                                             {:opts {:select-ch month-select-ch}})
+                                                               [(dom/div #js {:className "control right"
+                                                                              :onClick   #(om/set-state! owner :grid-date (d/next-month grid-date))})]))
+                                                       (apply dom/div #js {:className "gridlines"}
+                                                              (for [month months-range]
+                                                                (om/build gridline {:value           (:value month)
+                                                                                    :min-date        (if (= mode :start) min-date start)
+                                                                                    :max-date        max-date
+                                                                                    :selection-start start
+                                                                                    :selection-end   end}
+                                                                          {:opts {:first-day     first-day
+                                                                                  :instant-only? true
+                                                                                  :select-ch     select-ch}})))))))))))))

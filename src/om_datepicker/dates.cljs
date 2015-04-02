@@ -63,7 +63,8 @@
   (after? [this that])
   (before? [this that])
   (between? [this start end])
-  (is-future? [this]))
+  (is-future? [this])
+  (same-month? [this that]))
 
 (extend-protocol DateTimeProtocol
   js/Date
@@ -80,4 +81,8 @@
              (.getTime end))))
 
   (is-future? [this]
-    (> (.getTime this) (.getTime (js/Date.)))))
+    (> (.getTime this) (.getTime (js/Date.))))
+
+  (same-month? [this that]
+    (and (= (.getFullYear this) (.getFullYear that))
+         (= (.getMonth this) (.getMonth that)))))
