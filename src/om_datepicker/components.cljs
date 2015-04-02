@@ -152,13 +152,36 @@
         (put! result-ch new-value)
         (om/update! cursor [:value] new-value)))))
 
+(defn- corrected-month-start
+  [month-date min-date]
+  (let [start-date (d/first-of-month month-date)]
+    (cond
+     (nil? min-date)                     start-date
+     (before? min-date start-date)       start-date
+     (d/same-month? min-date start-date) min-date
+     :else                               nil)))
+
+(defn- corrected-month-end
+  [month-date max-date]
+  (let [end-date (d/last-of-month month-date)]
+    (cond
+     (nil? max-date)                   end-date
+     (before? end-date max-date)       end-date
+     (d/same-month? max-date end-date) max-date
+     :else                             nil)))
+
+;;
+;; Component
+;;
+
 (defn monthpicker-panel
   "Creates a month-picker panel component.
 
    opts - a map of options. The following keys are supported:
 
-     :allow-past? - if false, picking a month from the past is not allowed.
-     :end-date    - if set, picking a month from the future is limited by that date.
+     :min-date    - if set, picking a month from the past is limited by that date.
+                    Can be a date or a number of days from today.
+     :max-date    - if set, picking a month from the future is limited by that date.
                     Can be a date or a number of days from today.
      :value-ch    - if set, the picker value is updated with the values from that channel.
      :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
@@ -167,14 +190,14 @@
    Example:
 
      (om/build monthpicker-panel app
-            {:opts {:allow-past? false
-                    :end-date    ...
-                    :result-ch   ...}})
+            {:opts {:min-date   ...
+                    :max-date   ...
+                    :result-ch  ...}})
   "
-  [cursor owner {:keys [allow-past? end-date value-ch result-ch value]
-                 :or   {allow-past? true value (d/current-month)}
-                 :as   opts}]
-  (let [end-date (d/coerse-date end-date)]
+  [cursor owner {:keys [min-date max-date value-ch result-ch value]
+                 :or   {value (d/current-month)}}]
+  (let [min-date (d/coerse-date min-date)
+        max-date (d/coerse-date max-date)]
     (reify
       om/IInitState
       (init-state [_]
@@ -203,10 +226,14 @@
       om/IRenderState
       (render-state [_ {:keys [value result-ch]}]
         (let [value           (or (:value cursor) value)
-              can-go-back?    (or allow-past?
-                                  (is-future? value))
-              can-go-forward? (or (nil? end-date)
-                                  (before? (d/next-month value) end-date))]
+              next            (d/next-month value)
+              previous        (d/previous-month value)
+              can-go-back?    (or (nil? min-date)
+                                  (before? min-date previous)
+                                  (d/same-month? previous min-date))
+              can-go-forward? (or (nil? max-date)
+                                  (before? next max-date)
+                                  (d/same-month? next max-date))]
           (dom/div #js {:className "month-panel navigation"}
                    (dom/div #js {:className (str "control left" (when-not can-go-back? " disabled"))
                                  :onClick   (when can-go-back?
@@ -221,8 +248,9 @@
 
    opts - a map of options. The following keys are supported:
 
-     :allow-past? - if false, picking a date from the past is not allowed.
-     :end-date    - if set, picking a date from the future is limited by that date.
+     :min-date    - if set, picking a date from the past is limited by that date.
+                    Can be a date or a number of days from today.
+     :max-date    - if set, picking a date from the future is limited by that date.
                     Can be a date or a number of days from today.
      :first-day   - the first day of the week. Default: 1 (Monday)
      :result-ch   - if passed, then values are put in that channel instead of :value key of the cursor.
@@ -232,16 +260,16 @@
    Example:
 
      (om/build datepicker-panel app
-            {:opts {:allow-past? false
-                    :end-date    ...
+            {:opts {:min-date    ...
+                    :max-date    ...
                     :first-day   0
                     :result-ch   ...
                     :style       :long}})
   "
-  [cursor owner {:keys [allow-past? end-date first-day result-ch style]
-                 :or   {allow-past? true first-day 1 style :medium}
-                 :as   opts}]
-  (let [end-date (d/coerse-date end-date)]
+  [cursor owner {:keys [min-date max-date first-day result-ch style]
+                 :or   {first-day 1 style :medium}}]
+  (let [min-date (d/coerse-date min-date)
+        max-date (d/coerse-date max-date)]
     (reify
       om/IInitState
       (init-state [_]
@@ -281,12 +309,12 @@
           (dom/div #js {:className "gridline-wrapper"}
                  (om/build monthpicker-panel
                            {:value value}
-                           {:opts {:allow-past? allow-past?
-                                   :end-date    end-date
-                                   :result-ch   month-change-ch}})
+                           {:opts {:min-date  min-date
+                                   :max-date  max-date
+                                   :result-ch month-change-ch}})
                  (om/build gridline {:value           value
-                                     :min-date        (when-not allow-past? (d/today))
-                                     :max-date        end-date
+                                     :min-date        min-date
+                                     :max-date        max-date
                                      :selection-start selected
                                      :selection-end   selected}
                            {:opts {:first-day     first-day
@@ -298,8 +326,9 @@
 
    opts - a map of options. The following keys are supported:
 
-     :allow-past? - if false, picking a date from the past is not allowed.
-     :end-date    - if set, picking a date from the future is limited by that date.
+     :min-date    - if set, picking a date from the past is limited by that date.
+                    Can be a date or a number of days from today.
+     :max-date    - if set, picking a date from the future is limited by that date.
                     Can be a date or a number of days from today.
      :first-day   - the first day of the week. Default: 1 (Monday)
      :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
@@ -309,15 +338,14 @@
    Example:
 
      (om/build datepicker app
-            {:opts {:allow-past? false
-                    :end-date    ...
+            {:opts {:min-date    ...
+                    :max-date    ...
                     :first-day   0
                     :result-ch   ...
                     :style       :long}})
   "
-  [cursor owner {:keys [allow-past? end-date first-day result-ch style]
-                 :or   {allow-past? true first-day 1 style :medium}
-                 :as   opts}]
+  [cursor owner {:keys [min-date max-date first-day result-ch style]
+                 :or   {first-day 1 style :medium}}]
   (reify
     om/IInitState
     (init-state [_]
@@ -370,29 +398,11 @@
                                  (dom/div #js {:className "datepicker-popup-content"}
                                           (dom/div #js {:className "pointer"})
                                           (om/build datepicker-panel cursor
-                                                    {:opts {:allow-past? allow-past?
-                                                            :end-date    end-date
-                                                            :first-day   first-day
-                                                            :result-ch   select-ch
-                                                            :style       style}}))))))))
-
-(defn- corrected-month-start
-  [month-date min-date]
-  (let [start-date (d/first-of-month month-date)]
-    (cond
-     (nil? min-date)                     start-date
-     (before? min-date start-date)       start-date
-     (d/same-month? min-date start-date) min-date
-     :else                               nil)))
-
-(defn- corrected-month-end
-  [month-date max-date]
-  (let [end-date (d/last-of-month month-date)]
-    (cond
-     (nil? max-date)                   end-date
-     (before? end-date max-date)       end-date
-     (d/same-month? max-date end-date) max-date
-     :else                             nil)))
+                                                    {:opts {:min-date  min-date
+                                                            :max-date  max-date
+                                                            :first-day first-day
+                                                            :result-ch select-ch
+                                                            :style     style}}))))))))
 
 (defn rangepicker
   "Creates a range-picker component.

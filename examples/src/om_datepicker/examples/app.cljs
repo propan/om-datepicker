@@ -16,17 +16,17 @@
  monthpicker-panel
  app-state
  {:path   [:month-panel]
-  :opts   {:allow-past? false
-           :end-date    60}
+  :opts   {:min-date -60
+           :max-date  60}
   :target (js/document.getElementById "monthpicker-panel")})
 
 (om/root
  datepicker-panel
  app-state
  {:path   [:date-panel]
-  :opts   {:allow-past? false
-           :end-date    15
-           :first-day   0}
+  :opts   {:min-date  -15
+           :max-date   15
+           :first-day  0}
   :target (js/document.getElementById "datepicker-panel")})
 
 (om/root
