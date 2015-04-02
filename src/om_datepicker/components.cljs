@@ -395,6 +395,23 @@
      :else                             nil)))
 
 (defn rangepicker
+  "Creates a range-picker component.
+
+   opts - a map of options. The following keys are supported:
+
+     :min-date    - if set, the begining of a possible range is limited by that date.
+                    Can be a date or a number of days from today.
+     :max-date    - if set, the ending of a possible range is limited by that date.
+                    Can be a date or a number of days from today.
+     :first-day   - the first day of the week. Default: 1 (Monday)
+
+   Example:
+
+     (om/build datepicker app
+            {:opts {:min-date   ...
+                    :max-date   ...
+                    :first-day  0}})
+  "
   [cursor owner {:keys [min-date max-date first-day]
                  :or   {first-day 1}}]
   (let [min-date (d/coerse-date min-date)
