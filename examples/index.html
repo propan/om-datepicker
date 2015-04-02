@@ -20,7 +20,7 @@
         <p>
           Include the library in your leiningen project dependencies:
         </p>
-        <pre><code class="clojure">[om-datepicker "0.0.1"]</code></pre>
+        <pre><code class="clojure">[om-datepicker "0.0.3"]</code></pre>
       </section>
 
       <section>
@@ -65,6 +65,13 @@
       <section>
         <h2>Range Picker</h2>
         <div id="rangepicker-demo"></div>
+<pre><code class="clojure">(om/root
+ rangepicker
+ app-state
+ {:path   [:rangepicker]
+  :opts   {:min-date -180
+           :max-date  180}
+  :target (js/document.getElementById "rangepicker-demo")})</code></pre>
       </section>
 
       <section>

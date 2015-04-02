@@ -39,4 +39,6 @@
  rangepicker
  app-state
  {:path   [:rangepicker]
+  :opts   {:min-date -180
+           :max-date  180}
   :target (js/document.getElementById "rangepicker-demo")})
