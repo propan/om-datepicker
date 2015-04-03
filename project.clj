@@ -39,7 +39,5 @@
              :compiler     {:output-to        "examples/app.min.js"
                             :optimizations    :advanced
                             :pretty-print     false
-                            :preamble         ["../resources/vendor/react/react-with-addons-0.12.2.min.js"]
-                            :externs          ["../resources/vendor/react/react-with-addons-0.12.2.js"]
                             :closure-warnings {:externs-validation :off
                                                :non-standard-jsdoc :off}}}]})
