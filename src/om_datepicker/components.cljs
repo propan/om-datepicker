@@ -103,9 +103,7 @@
         (dom/div #js {:className    (str class (when highlighted " highlighted"))
                       :onClick      touch-fn
                       :onTouchStart touch-fn
-                      :onTouchEnd   (fn [e]
-                                      (.preventDefault e)
-                                      false)
+                      :onTouchEnd   #(.preventDefault %)
                       :onMouseEnter (when allowed?
                                       #(om/set-state! owner :highlighted true))
                       :onMouseLeave (when allowed?
