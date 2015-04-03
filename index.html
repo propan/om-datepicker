@@ -21,7 +21,7 @@
         <p>
           Include the library in your leiningen project dependencies:
         </p>
-        <pre><code class="clojure">[om-datepicker "0.0.1"]</code></pre>
+        <pre><code class="clojure">[om-datepicker "0.0.3"]</code></pre>
       </section>
 
       <section>
@@ -45,8 +45,8 @@
  monthpicker-panel
  app-state
  {:path   [:month-panel]
-  :opts   {:allow-past? false
-           :end-date    60}
+  :opts   {:min-date   -60
+           :max-date    60}
   :target (js/document.getElementById "monthpicker-panel")})</code></pre>
       </section>
 
@@ -58,9 +58,21 @@
  datepicker-panel
  app-state
  {:path   [:date-panel]
-  :opts   {:allow-past? false
-           :end-date    15}
+  :opts   {:min-date   -15
+           :max-date    15}
   :target (js/document.getElementById "datepicker-panel")})</code></pre>
+      </section>
+
+      <section>
+        <h2>Range Picker</h2>
+        <div id="rangepicker-demo"></div>
+<pre><code class="clojure">(om/root
+ rangepicker
+ app-state
+ {:path   [:rangepicker]
+  :opts   {:min-date -180
+           :max-date  180}
+  :target (js/document.getElementById "rangepicker-demo")})</code></pre>
       </section>
 
       <section>

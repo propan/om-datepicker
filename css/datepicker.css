@@ -1,5 +1,8 @@
 /*
- * Datepicker Styles
+ * Datepicker Properties
+ */
+/*
+ * Rangepicker Properties
  */
 .noselect {
   -webkit-touch-callout: none;
@@ -9,20 +12,7 @@
   -ms-user-select: none;
   user-select: none;
 }
-.cell {
-  float: left;
-  text-align: center;
-  width: 30px;
-  height: 30px;
-  line-height: 30px;
-  color: #bcbcbc;
-}
-.days {
-  height: 30px;
-  border-bottom: 1px solid #e0e0e0;
-  border-top: 1px solid #e0e0e0;
-}
-.date-panel {
+.gridline-wrapper {
   border: 1px solid #e0e0e0;
   width: 210px;
   background-color: #ffffff;
@@ -49,25 +39,23 @@
 }
 .month-panel .control {
   width: 30px;
-  text-align: center;
-  cursor: pointer;
-}
-.month-panel .left:after {
-  content: "<";
-}
-.month-panel .right:after {
-  content: ">";
-}
-.month-panel .control.disabled {
-  cursor: initial;
-}
-.month-panel .control.disabled.left:after,
-.month-panel .control.disabled.right:after {
-  content: "";
 }
 .month-panel .label {
   width: 150px;
   text-align: center;
+}
+.cell {
+  float: left;
+  text-align: center;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  color: #bcbcbc;
+}
+.days {
+  height: 30px;
+  border-bottom: 1px solid #e0e0e0;
+  border-top: 1px solid #e0e0e0;
 }
 .cell.instant,
 .days > .cell {
@@ -94,16 +82,38 @@
   background-color: #666666;
 }
 .weekend {
-  background-color: #f0f0f0;
+  background-color: #f9f9f9;
 }
 /*
- * DatePicker
+ * Navigation
  */
-.datepicker {
+.navigation .control {
+  text-align: center;
+  cursor: pointer;
+}
+.navigation .control.left:after {
+  content: "<";
+}
+.navigation .control.right:after {
+  content: ">";
+}
+.navigation .control.disabled {
+  cursor: initial;
+}
+.navigation .control.disabled.left:after,
+.navigation .control.disabled.right:after {
+  content: "";
+}
+/*
+ * DatePicker + RangePicker
+ */
+.datepicker,
+.rangepicker {
   position: relative;
   display: inline-block;
 }
-.datepicker-input {
+.datepicker-input,
+.rangepicker-input {
   padding: 6px;
   cursor: pointer;
   text-align: center;
@@ -122,14 +132,18 @@
   -ms-user-select: none;
   user-select: none;
 }
-.datepicker-input.highlighted {
+.datepicker-input.highlighted,
+.rangepicker-input.highlighted {
   border: 1px solid #aaaaaa;
 }
+/*
+ * DatePicker Only
+ */
 .datepicker-popup {
   position: absolute;
   margin-top: 25px;
 }
-.datepicker-popup-inner {
+.datepicker-popup .datepicker-popup-inner {
   position: absolute;
   margin-top: -20px;
 }
@@ -139,7 +153,7 @@
   box-shadow: 0 0 5px 1px gray;
   position: relative;
 }
-.datepicker .pointer {
+.datepicker-popup .pointer {
   position: absolute;
   left: 25px;
 }
@@ -155,6 +169,133 @@
   border-width: 10px;
   left: 50%;
 }
-.datepicker-popup .date-panel {
+.datepicker-popup .gridline-wrapper {
   border: none;
+}
+/*
+ * RangePicker Only
+ */
+.rangepicker-input {
+  width: 190px;
+}
+.rangepicker {
+  font-size: 12px;
+  line-height: 12px;
+}
+.rangepicker .daterange-input {
+  padding: 5px 4px 3px 4px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 12px;
+  line-height: 14px;
+  vertical-align: middle;
+  width: 80px;
+  border: 1px solid #e0e0e0;
+  -webkit-appearance: none;
+  -webkit-border-radius: 0;
+  border-radius: 0;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+.rangepicker .daterange-input.highlighted {
+  border-color: #116AE0;
+}
+.rangepicker .button {
+  font-size: 12px;
+  line-height: 14px;
+  vertical-align: middle;
+  width: 80px;
+  cursor: pointer;
+  padding: 5px 4px 3px 4px;
+  display: inline-block;
+  text-align: center;
+  border: 1px #e0e0e0 solid;
+  border-radius: 4px;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+.rangepicker .button:hover {
+  border-color: #c7c7c7;
+}
+.rangepicker .button.disabled,
+.rangepicker .button.disabled:hover {
+  cursor: default;
+  color: #c0c0c0;
+  border-color: #f0f0f0;
+}
+.rangepicker .controls-panel {
+  padding: 5px 3px;
+  text-align: center;
+}
+.rangepicker .inputs-panel,
+.rangepicker .buttons-panel {
+  display: inline-block;
+  margin: 3px;
+}
+.rangepicker .buttons-panel .button:first-child {
+  margin-left: 0;
+  margin-right: 7px;
+}
+.rangepicker .buttons-panel .button:last-child {
+  margin-left: 7px;
+  margin-right: 0;
+}
+.rangepicker .rangepicker-popup {
+  position: absolute;
+  width: 466px;
+  border: 1px #e0e0e0 solid;
+}
+.rangepicker .rangepicker-popup-content {
+  background-color: #ffffff;
+}
+.rangepicker .months div {
+  display: inline-block;
+}
+.rangepicker .months .month {
+  padding: 4px 5px 3px 5px;
+  width: 130px;
+  text-align: center;
+  color: #455F81;
+  font-weight: bold;
+  cursor: pointer;
+}
+.rangepicker .months .control {
+  width: 23px;
+}
+.rangepicker .gridlines {
+  padding: 0 23px 5px 23px;
+}
+.rangepicker .gridline {
+  display: inline-block;
+  width: 140px;
+}
+.rangepicker .cell {
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+}
+.rangepicker .days {
+  height: 20px;
+  font-weight: bold;
+}
+.rangepicker .week {
+  width: 140px;
+  height: 20px;
+}
+.rangepicker .week > .cell.selected {
+  background-color: #116AE0;
+}
+.rangepicker .week > .cell.highlighted {
+  background-color: #E49D04;
+}
+.rangepicker .week > .cell.disabled {
+  text-decoration: none;
 }
