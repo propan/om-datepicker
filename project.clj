@@ -12,7 +12,7 @@
                  [org.omcljs/om "0.8.8" :exclusions [cljsjs/react] :scope "provided"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
-            [com.cemerick/clojurescript.test "0.3.0"]
+            [com.cemerick/clojurescript.test "0.3.3"]
             [lein-less "1.7.2"]]
 
   :source-paths ["src"]
@@ -32,7 +32,7 @@
                    {:id           "test"
                     :source-paths ["src" "test"]
                     :compiler     {:output-to     "target/om-datepicker-tests.js"
-                                   :optimizations :whitespace
+                                   :optimizations :simple
                                    :pretty-print  true}}
 
                    {:id           "examples"
