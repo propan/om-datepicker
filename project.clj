@@ -35,7 +35,6 @@
                     :source-paths ["src" "test"]
                     :compiler     {:output-to     "target/om-datepicker-tests.js"
                                    :optimizations :whitespace
-                                   :hashbang      false
                                    :pretty-print  true}}
 
                    {:id           "examples"
@@ -52,5 +51,9 @@
                                    :pretty-print     false
                                    :closure-warnings {:externs-validation :off
                                                       :non-standard-jsdoc :off}}}]
-   :test-commands {"unit-tests" ["phantomjs" :runner
-                                 "target/om-datepicker-tests.js"]}})
+   :test-commands {"phantom-test"  ["phantomjs" :runner
+                                    "window.literal_js_was_evaluated=true"
+                                    "target/om-datepicker-tests.js"]
+                   "slimerjs-test" ["xvfb-run" "-a" "slimerjs" :runner
+                                    "window.literal_js_was_evaluated=true"
+                                    "target/om-datepicker-tests.js"]}})
