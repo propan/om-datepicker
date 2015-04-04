@@ -17,6 +17,8 @@
 
   :source-paths ["src"]
 
+  :hooks [leiningen.cljsbuild]
+
   :less
   {:source-paths ["examples/less"]
    :target-path   "examples/public/css"}
@@ -32,7 +34,8 @@
                    {:id           "test"
                     :source-paths ["src" "test"]
                     :compiler     {:output-to     "target/om-datepicker-tests.js"
-                                   :optimizations :simple
+                                   :optimizations :whitespace
+                                   :hashbang      false
                                    :pretty-print  true}}
 
                    {:id           "examples"
