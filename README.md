@@ -1,4 +1,4 @@
-# om-datepicker
+# om-datepicker [![Build Status](https://travis-ci.org/propan/om-datepicker.svg)](https://travis-ci.org/propan/om-datepicker)
 
 a collection of various date/month picker components for [Om][0].
 
