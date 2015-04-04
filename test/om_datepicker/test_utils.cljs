@@ -1,5 +1,6 @@
 (ns om-datepicker.test-utils
-  (:require [goog.dom]
+  (:require [cemerick.cljs.test :as t]
+            [goog.dom]
             [goog.dom.classes]))
 
 (def simulate js/React.addons.TestUtils.Simulate)
