@@ -4,7 +4,7 @@
   (:require [cemerick.cljs.test :as t]
             [cljs.core.async :refer [timeout <!]]
             [om.core :as om :include-macros true]
-            [om-datepicker.components :refer [monthpicker-panel]]
+            [om-datepicker.components :refer [datepicker-panel monthpicker-panel]]
             [om-datepicker.test-utils :as u :refer [click sel sel1 text]]))
 
 (defn- node-text
@@ -12,6 +12,10 @@
   (-> parent
       (sel1 selector)
       text))
+
+(extend-type js/NodeList
+  ISeqable
+  (-seq [array] (array-seq array 0)))
 
 (deftest ^:async test-monthpicker-panel-with-lower-bound
   (go
@@ -63,4 +67,106 @@
        (is (= {:value (js/Date. 2015 7 1)} (:month @state)))
        (is (= "August 2015" (node-text test-node ".label")))))
    
+   (done)))
+
+(deftest ^:async test-datepicker-panel-navigation-back
+  (go
+   (let [state     (atom {:panel {:value (js/Date. 2015 3 5)}})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root datepicker-panel state {:path   [:panel]
+                                      :target test-node
+                                      :opts   {:first-day 0
+                                               :min-date  (js/Date. 2015 2 5)}})
+
+     (testing "Renders correctly initial state"
+       (is (= "April 2015" (node-text test-node ".label")))
+
+       (is (= ["Su" "Mo" "Tu" "We" "Th" "Fr" "Sa"]
+              (mapv text (sel test-node ".days .cell"))))
+
+       (is (= ["29" "30" "31" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15" "16" "17" "18" "19" "20" "21" "22" "23" "24" "25" "26" "27" "28" "29" "30" "1" "2" "3" "4" "5" "6" "7" "8" "9"]
+              (mapv text (sel test-node ".week > .cell"))))
+
+       (is (every? true?
+                   (mapv #(u/has-class? % "weekend") (sel test-node ".week > .cell:first-child"))))
+
+       (is (every? true?
+                   (mapv #(u/has-class? % "weekend") (sel test-node ".week > .cell:last-child")))))
+
+     (testing "Shows previous month on click on .left control"
+       (dotimes [_ 5]
+         (click (sel1 test-node ".left")))
+       (<! (timeout 100))
+
+       (is (= "March 2015" (node-text test-node ".label")))
+
+       (is (= ["1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15" "16" "17" "18" "19" "20" "21" "22" "23" "24" "25" "26" "27" "28" "29" "30" "31" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11"]
+              (mapv text (sel test-node ".week > .cell"))))))
+
+   (done)))
+
+(deftest ^:async test-datepicker-panel-navigation-forward
+  (go
+   (let [state     (atom {:panel {:value (js/Date. 2015 3 5)}})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root datepicker-panel state {:path   [:panel]
+                                      :target test-node
+                                      :opts   {:style    :short
+                                               :max-date (js/Date. 2015 4 5)}})
+
+     (testing "Renders correctly initial state"
+       (is (= "April 2015" (node-text test-node ".label")))
+
+       (is (= ["M" "T" "W" "T" "F" "S" "S"]
+              (mapv text (sel test-node ".days .cell"))))
+
+       (is (= ["30" "31" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15" "16" "17" "18" "19" "20" "21" "22" "23" "24" "25" "26" "27" "28" "29" "30" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10"]
+              (mapv text (sel test-node ".week > .cell"))))
+
+       (is (every? true?
+                   (mapv #(u/has-class? % "weekend") (sel test-node ".week > .cell:nth-child(6)"))))
+
+       (is (every? true?
+                   (mapv #(u/has-class? % "weekend") (sel test-node ".week > .cell:nth-child(7)")))))
+
+     (testing "Shows next month on click on .right control"
+       (dotimes [_ 5]
+         (click (sel1 test-node ".right")))
+       (<! (timeout 100))
+
+       (is (= "May 2015" (node-text test-node ".label")))
+
+       (is (= ["27" "28" "29" "30" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15" "16" "17" "18" "19" "20" "21" "22" "23" "24" "25" "26" "27" "28" "29" "30" "31" "1" "2" "3" "4" "5" "6" "7"]
+              (mapv text (sel test-node ".week > .cell"))))))
+
+   (done)))
+
+(deftest ^:async test-datepicker-panel-date-selection
+  (go
+   (let [state     (atom {:panel {:value (js/Date. 2015 3 15)}})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root datepicker-panel state {:path   [:panel]
+                                      :target test-node
+                                      :opts   {:min-date (js/Date. 2015 3 10)
+                                               :max-date (js/Date. 2015 3 20)}})
+
+     (testing "Allows selection of a date and highlights it"
+       (click (first (drop 14 (seq (sel test-node ".week > .cell")))))
+       (<! (timeout 100))
+
+       (is (= {:value (js/Date. 2015 3 13)} (:panel @state)))
+       (is (true? (u/has-class? (first (drop 14 (seq (sel test-node ".week > .cell")))) "selected"))))
+
+     (testing "Does not allow selection below min-date and above max-date"
+
+       (click (first (drop 4 (seq (sel test-node ".week > .cell")))))
+       (<! (timeout 100))
+
+       (is (= {:value (js/Date. 2015 3 13)} (:panel @state)))
+
+       (click (first (drop 24 (seq (sel test-node ".week > .cell")))))
+       (<! (timeout 100))
+
+       (is (= {:value (js/Date. 2015 3 13)} (:panel @state)))))
+
    (done)))

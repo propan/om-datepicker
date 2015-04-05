@@ -30,3 +30,7 @@
 (defn has-class?
   [elem class-name]
   (goog.dom.classes.has elem class-name))
+
+(defn classes
+  [elem]
+  (goog.dom.classes.get elem))
