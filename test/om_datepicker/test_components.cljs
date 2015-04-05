@@ -4,7 +4,7 @@
   (:require [cemerick.cljs.test :as t]
             [cljs.core.async :refer [timeout <!]]
             [om.core :as om :include-macros true]
-            [om-datepicker.components :refer [datepicker-panel monthpicker-panel]]
+            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel]]
             [om-datepicker.test-utils :as u :refer [click sel sel1 text]]))
 
 (defn- node-text
@@ -168,5 +168,43 @@
        (<! (timeout 100))
 
        (is (= {:value (js/Date. 2015 3 13)} (:panel @state)))))
+
+   (done)))
+
+(deftest ^:async test-datepicker-expansion-and-selection
+  (go
+   (let [state     (atom {:date {:value (js/Date. 2015 3 15)}})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root datepicker state {:path   [:date]
+                                :target test-node
+                                :opts   {:min-date (js/Date. 2015 3 10)
+                                         :max-date (js/Date. 2015 3 20)}})
+
+     (testing "Expands on click"
+       (is (false? (u/is-shown? (sel1 test-node ".datepicker-popup"))))
+       (click (sel1 test-node ".datepicker-input"))
+       (<! (timeout 100))
+       (is (true? (u/is-shown? (sel1 test-node ".datepicker-popup"))))
+       (click (sel1 test-node ".datepicker-input"))
+       (<! (timeout 100))
+       (is (false? (u/is-shown? (sel1 test-node ".datepicker-popup")))))
+
+     (testing "Allows selection of a date and highlights it"
+       (click (first (drop 14 (seq (sel test-node ".week > .cell")))))
+       (<! (timeout 100))
+
+       (is (= {:value (js/Date. 2015 3 13)} (:date @state)))
+       (is (true? (u/has-class? (first (drop 14 (seq (sel test-node ".week > .cell")))) "selected"))))
+
+     (testing "Does not allow selection below min-date and above max-date"
+       (click (first (drop 4 (seq (sel test-node ".week > .cell")))))
+       (<! (timeout 100))
+
+       (is (= {:value (js/Date. 2015 3 13)} (:date @state)))
+
+       (click (first (drop 24 (seq (sel test-node ".week > .cell")))))
+       (<! (timeout 100))
+
+       (is (= {:value (js/Date. 2015 3 13)} (:date @state)))))
 
    (done)))

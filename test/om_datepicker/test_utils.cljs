@@ -1,7 +1,8 @@
 (ns om-datepicker.test-utils
   (:require [cemerick.cljs.test :as t]
             [goog.dom]
-            [goog.dom.classes]))
+            [goog.dom.classes]
+            [goog.style]))
 
 (def simulate js/React.addons.TestUtils.Simulate)
 
@@ -32,5 +33,9 @@
   (goog.dom.classes.has elem class-name))
 
 (defn classes
-  [elem]
-  (goog.dom.classes.get elem))
+  [el]
+  (goog.dom.classes.get el))
+
+(defn is-shown?
+  [el]
+  (goog.style.isElementShown el))
