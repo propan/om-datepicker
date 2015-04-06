@@ -227,6 +227,50 @@
 
    (done)))
 
+(deftest ^:async test-rangepicker-cancel-button
+  (go
+   (let [state     (atom {:start (js/Date. 2015 3 15)
+                          :end   (js/Date. 2015 3 20)})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root rangepicker state {:target test-node})
+
+     (testing "Apply and cancel buttons are enabled on range change and disabled on cancel click"
+       (is (every? true? (map #(u/has-class? % "disabled") (sel test-node ".button"))))
+       (click (sel1 test-node ".gridline:nth-child(2) > .week > .instant"))
+       (<! (timeout 100))
+       (is (every? false? (map #(u/has-class? % "disabled") (sel test-node ".button"))))
+       (click (last (sel test-node ".button")))
+       (<! (timeout 100))
+       (is (every? true? (map #(u/has-class? % "disabled") (sel test-node ".button"))))
+       (let [{:keys [start end]} @state]
+         (is (= (js/Date. 2015 3 15) start))
+         (is (= (js/Date. 2015 3 20) end)))))
+
+   (done)))
+
+(deftest ^:async test-rangepicker-apply-button
+  (go
+   (let [state     (atom {:start (js/Date. 2015 3 15)
+                          :end   (js/Date. 2015 3 20)})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root rangepicker state {:target test-node})
+
+     (testing "Apply and cancel buttons are enabled on range change and disabled on apply click"
+       (is (every? true? (map #(u/has-class? % "disabled") (sel test-node ".button"))))
+       (click (sel1 test-node ".gridline:nth-child(2) > .week:nth-child(3) > .instant:first-child"))
+       (<! (timeout 100))
+       (click (sel1 test-node ".gridline:nth-child(2) > .week:nth-child(3) > .instant:last-child"))
+       (<! (timeout 100))
+       (is (every? false? (map #(u/has-class? % "disabled") (sel test-node ".button"))))
+       (click (first (sel test-node ".button")))
+       (<! (timeout 100))
+       (is (every? true? (map #(u/has-class? % "disabled") (sel test-node ".button"))))
+       (let [{:keys [start end]} @state]
+         (is (= (js/Date. 2015 3 6) start))
+         (is (= (js/Date. 2015 3 12) end)))))
+
+   (done)))
+
 (deftest ^:async test-rangepicker-selection-on-month-click
   (go
    (let [state     (atom {:start (js/Date. 2015 3 15)
