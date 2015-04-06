@@ -4,7 +4,7 @@
   (:require [cemerick.cljs.test :as t]
             [cljs.core.async :refer [timeout <!]]
             [om.core :as om :include-macros true]
-            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel]]
+            [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel rangepicker]]
             [om-datepicker.test-utils :as u :refer [click sel sel1 text]]))
 
 (defn- node-text
@@ -206,5 +206,65 @@
        (<! (timeout 100))
 
        (is (= {:value (js/Date. 2015 3 13)} (:date @state)))))
+
+   (done)))
+
+(deftest ^:async test-rangepicker-expansion
+  (go
+   (let [state     (atom {:start (js/Date. 2015 3 15)
+                          :end   (js/Date. 2015 3 20)})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root rangepicker state {:target test-node})
+
+     (testing "Expands on click"
+       (is (false? (u/is-shown? (sel1 test-node ".rangepicker-popup"))))
+       (click (sel1 test-node ".rangepicker-input"))
+       (<! (timeout 100))
+       (is (true? (u/is-shown? (sel1 test-node ".rangepicker-popup"))))
+       (click (sel1 test-node ".rangepicker-input"))
+       (<! (timeout 100))
+       (is (false? (u/is-shown? (sel1 test-node ".rangepicker-popup"))))))
+
+   (done)))
+
+(deftest ^:async test-rangepicker-selection-on-month-click
+  (go
+   (let [state     (atom {:start (js/Date. 2015 3 15)
+                          :end   (js/Date. 2015 3 20)})
+         test-node (u/html->dom "<div class='content'></div>")]
+     (om/root rangepicker state {:target test-node
+                                 :opts   {:min-date (js/Date. 2015 2 10)
+                                          :max-date (js/Date. 2015 4 20)}})
+
+     (testing "Selects a full month on month name click"
+       (click (second (sel test-node ".month")))
+       (<! (timeout 100))
+       (click (first (sel test-node ".button")))
+       (<! (timeout 100))
+       (let [{:keys [start end]} @state]
+         (is (= (js/Date. 2015 3 1) start))
+         (is (= (js/Date. 2015 3 30) end))))
+
+     (testing "Selects a range limited by min-date on month click"
+       (click (first (sel test-node ".month")))
+       (<! (timeout 100))
+       (click (first (sel test-node ".button")))
+       (<! (timeout 100))
+       (let [{:keys [start end]} @state]
+         (is (= (js/Date. 2015 2 10) start))
+         (is (= (js/Date. 2015 2 31) end)))
+       )
+
+     (testing "Selects a range limited by max-date on month click"
+       ;; move to May
+       (click (sel1 test-node ".right"))
+       (<! (timeout 100))
+       (click (last (sel test-node ".month")))
+       (<! (timeout 100))
+       (click (first (sel test-node ".button")))
+       (<! (timeout 100))
+       (let [{:keys [start end]} @state]
+         (is (= (js/Date. 2015 4 1) start))
+         (is (= (js/Date. 2015 4 20) end)))))
 
    (done)))
