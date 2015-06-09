@@ -100,8 +100,8 @@ An example LESS file that can be used to customize components can be found at `e
             [om-datepicker.components :refer [rangepicker]]))
 
 (defonce app-state
-  (atom {:range {:start (js/Date 2015 4 10)}
-                 :end   (js/Date 2015 4 20)}))
+  (atom {:range {:start (js/Date. 2015 4 10)
+                 :end   (js/Date. 2015 4 20)}}))
 
 (om/root
  rangepicker
