@@ -9,7 +9,7 @@
 (def days
   {:short  ["S" "M" "T" "W" "T" "F" "S"]
    :medium ["Su" "Mo" "Tu" "We" "Th" "Fr" "Sa"]
-   :long   ["Sun" "Mon" "Tue" "Wen" "Tho" "Fri" "San"]})
+   :long   ["Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat"]})
 
 (def months
   {:short ["Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"]
