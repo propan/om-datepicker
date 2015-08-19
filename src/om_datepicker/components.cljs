@@ -415,15 +415,19 @@
      :max-date    - if set, the ending of a possible range is limited by that date.
                     Can be a date or a number of days from today.
      :first-day   - the first day of the week. Default: 1 (Monday)
+     :result-ch   - if passed, then picked values are put in that channel as a map with
+                    :start and :end keys, otherwise they will be put in the :start and
+                    :end keys of the cursor.
 
    Example:
 
-     (om/build datepicker app
+     (om/build rangepicker app
             {:opts {:min-date   ...
                     :max-date   ...
-                    :first-day  0}})
+                    :first-day  0}
+                    :result-ch  ...})
   "
-  [cursor owner {:keys [min-date max-date first-day]
+  [cursor owner {:keys [min-date max-date first-day result-ch]
                  :or   {first-day 1}}]
   (let [min-date (d/coerse-date min-date)
         max-date (d/coerse-date max-date)]
@@ -521,9 +525,11 @@
                                                                                                (doto owner
                                                                                                  (om/set-state! :expanded false)
                                                                                                  (om/set-state! :mode :start))
-                                                                                               (doto cursor
-                                                                                                 (om/update! [:start] start)
-                                                                                                 (om/update! [:end] end))))}
+                                                                                               (if result-ch
+                                                                                                 (put! result-ch {:start start :end end})
+                                                                                                 (doto cursor
+                                                                                                   (om/update! [:start] start)
+                                                                                                   (om/update! [:end] end)))))}
                                                                           "Apply")
                                                                 (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
                                                                                :onClick   (when is-modified?
