@@ -116,6 +116,9 @@ An example LESS file that can be used to customize components can be found at `e
 * :min-date    - if set, picking a date from the past is limited by that date. Can be a date or a number of days from today.
 * :max-date    - if set, picking a date from the future is limited by that date. Can be a date or a number of days from today.
 * :first-day   - the first day of the week. Default: 1 (Monday)
+* :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
+
+When `result-ch` is provided, values are put in the channel as `{:start (js/Date.) :end (js/Date.)}`
 
 ## License
 
