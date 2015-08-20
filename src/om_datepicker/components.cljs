@@ -438,6 +438,8 @@
          :mode            :start
          :start           (get cursor :start (d/today))
          :end             (get cursor :end (d/today))
+         :selected-start  (get cursor :start (d/today))
+         :selected-end    (get cursor :end (d/today))
          :mouse-click-ch  (mouse-click)
          :month-select-ch (chan (sliding-buffer 1))
          :select-ch       (chan (sliding-buffer 1))
@@ -483,12 +485,12 @@
         (put! (om/get-state owner :kill-ch) true))
 
       om/IRenderState
-      (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch month-select-ch]}]
+      (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch month-select-ch selected-start selected-end]}]
         (let [grid-date    (or grid-date
                                (if (= mode :start) start end))
               months-range (generate-months-range grid-date)
-              is-modified? (not (and (= start (:start cursor))
-                                     (= end   (:end cursor))))]
+              is-modified? (not (and (= start selected-start)
+                                     (= end   selected-end)))]
           (dom/div #js {:className "rangepicker"}
                    (dom/input #js {:type         "text"
                                    :readOnly     "readonly"
@@ -524,9 +526,12 @@
                                                                                             #(do
                                                                                                (doto owner
                                                                                                  (om/set-state! :expanded false)
-                                                                                                 (om/set-state! :mode :start))
+                                                                                                 (om/set-state! :mode :start)
+                                                                                                 (om/set-state! :selected-start start)
+                                                                                                 (om/set-state! :selected-end end))
                                                                                                (if result-ch
-                                                                                                 (put! result-ch {:start start :end end})
+                                                                                                 (put! result-ch {:start start
+                                                                                                                  :end end})
                                                                                                  (doto cursor
                                                                                                    (om/update! [:start] start)
                                                                                                    (om/update! [:end] end)))))}
