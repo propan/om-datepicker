@@ -415,14 +415,17 @@
      :max-date    - if set, the ending of a possible range is limited by that date.
                     Can be a date or a number of days from today.
      :first-day   - the first day of the week. Default: 1 (Monday)
-     :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
+     :result-ch   - if passed, then picked values are put in that channel as a map with
+                    :start and :end keys, otherwise they will be put in the :start and
+                    :end keys of the cursor.
 
    Example:
 
-     (om/build datepicker app
+     (om/build rangepicker app
             {:opts {:min-date   ...
                     :max-date   ...
-                    :first-day  0}})
+                    :first-day  0}
+                    :result-ch  ...})
   "
   [cursor owner {:keys [min-date max-date first-day result-ch]
                  :or   {first-day 1}}]
