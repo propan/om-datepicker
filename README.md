@@ -9,7 +9,7 @@ a collection of various date/month picker components for [Om][0].
 Include the library in your leiningen project dependencies:
 
 ```clojure
-[om-datepicker "0.0.4"]
+[om-datepicker "0.0.5"]
 ```
 
 An example LESS file that can be used to customize components can be found at `examples/less/datepicker.less`.
