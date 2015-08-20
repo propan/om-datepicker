@@ -1,4 +1,4 @@
-(defproject om-datepicker "0.0.5-SNAPSHOT"
+(defproject om-datepicker "0.0.5"
   :description "a collection of various date/month picker components for Om"
   :url "http://github.com/prokpa/om-datepicker"
 
