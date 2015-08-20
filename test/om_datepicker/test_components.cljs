@@ -2,7 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]]
                    [cemerick.cljs.test :refer [done is deftest testing test-var]])
   (:require [cemerick.cljs.test :as t]
-            [cljs.core.async :refer [timeout <!]]
+            [cljs.core.async :refer [timeout <! chan]]
             [om.core :as om :include-macros true]
             [om-datepicker.components :refer [datepicker datepicker-panel monthpicker-panel rangepicker]]
             [om-datepicker.test-utils :as u :refer [click sel sel1 text]]))
@@ -24,7 +24,7 @@
      (om/root monthpicker-panel state {:path   [:month]
                                        :target test-node
                                        :opts   {:min-date (js/Date. 2015 3 1)}})
-     
+
      (testing "Renders correctly initial state"
        (is (= "June 2015" (node-text test-node ".label"))))
 
@@ -40,7 +40,7 @@
        (<! (timeout 100))
        (is (= {:value (js/Date. 2015 3 1)} (:month @state)))
        (is (= "April 2015" (node-text test-node ".label")))))
-   
+
    (done)))
 
 (deftest ^:async test-monthpicker-panel-with-upper-bound
@@ -50,7 +50,7 @@
      (om/root monthpicker-panel state {:path   [:month]
                                        :target test-node
                                        :opts   {:max-date (js/Date. 2015 7 10)}})
-     
+
      (testing "Renders correctly initial state"
        (is (= "June 2015" (node-text test-node ".label"))))
 
@@ -66,7 +66,7 @@
        (<! (timeout 100))
        (is (= {:value (js/Date. 2015 7 1)} (:month @state)))
        (is (= "August 2015" (node-text test-node ".label")))))
-   
+
    (done)))
 
 (deftest ^:async test-datepicker-panel-navigation-back
@@ -269,6 +269,38 @@
          (is (= (js/Date. 2015 3 6) start))
          (is (= (js/Date. 2015 3 12) end)))))
 
+   (done)))
+
+(deftest ^:async test-rangepicker-apply-button-with-result-ch
+  (go
+   (let [state     (atom {:start (js/Date. 2015 3 15)
+                          :end   (js/Date. 2015 3 20)})
+         test-node (u/html->dom "<div class='content'></div>")
+         result-ch (chan)]
+     (om/root rangepicker state {:target test-node
+                                 :opts {:result-ch result-ch}})
+
+     (testing "Apply and cancel buttons are enabled on range change and disabled on apply click"
+       (is (every? true? (map #(u/has-class? % "disabled") (sel test-node ".button")))
+           "Buttons are initially disabled")
+       (click (sel1 test-node ".gridline:nth-child(2) > .week:nth-child(3) > .instant:first-child"))
+       (<! (timeout 100))
+       (click (sel1 test-node ".gridline:nth-child(2) > .week:nth-child(3) > .instant:last-child"))
+       (<! (timeout 100))
+       (is (every? false? (map #(u/has-class? % "disabled") (sel test-node ".button")))
+           "Buttons are enabled after change")
+       (click (first (sel test-node ".button")))
+       (<! (timeout 100))
+       (is (every? true? (map #(u/has-class? % "disabled") (sel test-node ".button")))
+           "Buttons are disabled after saving change")
+       (let [{:keys [start end]} @state]
+         (is (= (js/Date. 2015 3 15) start))
+         (is (= (js/Date. 2015 3 20) end)))
+
+       (let [result (<! result-ch)]
+         (is (= {:start (js/Date. 2015 3 6)
+                 :end (js/Date. 2015 3 12)}
+                result)))))
    (done)))
 
 (deftest ^:async test-rangepicker-selection-on-month-click

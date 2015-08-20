@@ -415,6 +415,7 @@
      :max-date    - if set, the ending of a possible range is limited by that date.
                     Can be a date or a number of days from today.
      :first-day   - the first day of the week. Default: 1 (Monday)
+     :result-ch   - if passed, then picked values are put in that channel instead of :value key of the cursor.
 
    Example:
 
@@ -423,7 +424,7 @@
                     :max-date   ...
                     :first-day  0}})
   "
-  [cursor owner {:keys [min-date max-date first-day]
+  [cursor owner {:keys [min-date max-date first-day result-ch]
                  :or   {first-day 1}}]
   (let [min-date (d/coerse-date min-date)
         max-date (d/coerse-date max-date)]
@@ -434,6 +435,8 @@
          :mode            :start
          :start           (get cursor :start (d/today))
          :end             (get cursor :end (d/today))
+         :selected-start  (get cursor :start (d/today))
+         :selected-end    (get cursor :end (d/today))
          :mouse-click-ch  (mouse-click)
          :month-select-ch (chan (sliding-buffer 1))
          :select-ch       (chan (sliding-buffer 1))
@@ -479,12 +482,12 @@
         (put! (om/get-state owner :kill-ch) true))
 
       om/IRenderState
-      (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch month-select-ch]}]
+      (render-state [_ {:keys [expanded highlighted grid-date mode start end select-ch month-select-ch selected-start selected-end]}]
         (let [grid-date    (or grid-date
                                (if (= mode :start) start end))
               months-range (generate-months-range grid-date)
-              is-modified? (not (and (= start (:start cursor))
-                                     (= end   (:end cursor))))]
+              is-modified? (not (and (= start selected-start)
+                                     (= end   selected-end)))]
           (dom/div #js {:className "rangepicker"}
                    (dom/input #js {:type         "text"
                                    :readOnly     "readonly"
@@ -520,10 +523,15 @@
                                                                                             #(do
                                                                                                (doto owner
                                                                                                  (om/set-state! :expanded false)
-                                                                                                 (om/set-state! :mode :start))
-                                                                                               (doto cursor
-                                                                                                 (om/update! [:start] start)
-                                                                                                 (om/update! [:end] end))))}
+                                                                                                 (om/set-state! :mode :start)
+                                                                                                 (om/set-state! :selected-start start)
+                                                                                                 (om/set-state! :selected-end end))
+                                                                                               (if result-ch
+                                                                                                 (put! result-ch {:start start
+                                                                                                                  :end end})
+                                                                                                 (doto cursor
+                                                                                                   (om/update! [:start] start)
+                                                                                                   (om/update! [:end] end)))))}
                                                                           "Apply")
                                                                 (dom/span #js {:className (str "button" (when-not is-modified? " disabled"))
                                                                                :onClick   (when is-modified?
