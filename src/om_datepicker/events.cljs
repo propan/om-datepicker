@@ -2,7 +2,10 @@
   (:require [cljs.core.async :as async :refer [chan put!]]
             [goog.events :as events]))
 
-(defn mouse-click []
+(defn mouse-click-listen []
   (let [ch (chan)]
-    (events/listen js/document events/EventType.CLICK #(put! ch %))
-    ch))
+    {:ch ch
+     :listener-key (events/listen js/document events/EventType.CLICK #(put! ch %))}))
+
+(defn mouse-click-unlisten [listener-key]
+  (events/unlistenByKey listener-key))
