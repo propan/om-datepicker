@@ -4,8 +4,8 @@
 
 (defn mouse-click-listen []
   (let [ch (chan)]
-    {:ch ch
+    {:ch           ch
      :listener-key (events/listen js/document events/EventType.CLICK #(put! ch %))}))
 
-(defn mouse-click-unlisten [listener-key]
+(defn unlisten-by-key [listener-key]
   (events/unlistenByKey listener-key))

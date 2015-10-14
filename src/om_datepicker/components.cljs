@@ -4,7 +4,7 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [om-datepicker.dates :as d :refer [after? before? between? is-future?]]
-            [om-datepicker.events :refer [mouse-click-listen mouse-click-unlisten]]))
+            [om-datepicker.events :refer [mouse-click-listen unlisten-by-key]]))
 
 (def days
   {:short  ["S" "M" "T" "W" "T" "F" "S"]
@@ -382,7 +382,7 @@
 
     om/IWillUnmount
     (will-unmount [_]
-      (mouse-click-unlisten (om/get-state owner :mouse-listener))
+      (unlisten-by-key (om/get-state owner :mouse-listener))
       (put! (om/get-state owner :kill-ch) true))
 
     om/IRenderState
@@ -489,7 +489,7 @@
 
       om/IWillUnmount
       (will-unmount [_]
-        (mouse-click-unlisten (om/get-state owner :mouse-listener))
+        (unlisten-by-key (om/get-state owner :mouse-listener))
         (put! (om/get-state owner :kill-ch) true))
 
       om/IRenderState
