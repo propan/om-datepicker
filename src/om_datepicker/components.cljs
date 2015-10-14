@@ -361,8 +361,9 @@
         (go-loop []
                  (let [[v ch] (alts! [kill-ch mouse-click-ch select-ch] :priority true)]
                    (condp = ch
-                     mouse-click-ch (let [n (om/get-node owner)]
-                                      (when-not (.contains n (.-target v))
+                     mouse-click-ch (do
+                                      (when (and (om/mounted? owner)
+                                                 (not (.contains (om/get-node owner) (.-target v))))
                                         (om/set-state! owner :expanded false))
                                       (recur))
                      select-ch      (do
@@ -459,8 +460,9 @@
                                              (om/set-state! :end   end-date)
                                              (om/set-state! :mode  :start)))
                                          (recur))
-                       mouse-click-ch  (let [n (om/get-node owner)]
-                                         (when-not (.contains n (.-target v))
+                       mouse-click-ch  (do
+                                         (when (and (om/mounted? owner)
+                                                    (not (.contains (om/get-node owner) (.-target v))))
                                            (om/set-state! owner :expanded false))
                                          (recur))
                        select-ch       (let [mode (:mode (om/get-state owner))]
