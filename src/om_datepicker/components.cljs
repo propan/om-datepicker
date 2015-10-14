@@ -4,7 +4,7 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [om-datepicker.dates :as d :refer [after? before? between? is-future?]]
-            [om-datepicker.events :refer [mouse-click]]))
+            [om-datepicker.events :refer [mouse-click-listen mouse-click-unlisten]]))
 
 (def days
   {:short  ["S" "M" "T" "W" "T" "F" "S"]
@@ -350,10 +350,12 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:expanded       false
-       :mouse-click-ch (mouse-click)
-       :select-ch      (chan (sliding-buffer 1))
-       :kill-ch        (chan (sliding-buffer 1))})
+      (let [{mouse-ch :ch mouse-listener :listener-key} (mouse-click-listen)]
+        {:expanded       false
+         :mouse-listener mouse-listener
+         :mouse-click-ch mouse-ch
+         :select-ch      (chan (sliding-buffer 1))
+         :kill-ch        (chan (sliding-buffer 1))}))
 
     om/IWillMount
     (will-mount [_]
@@ -361,8 +363,9 @@
         (go-loop []
                  (let [[v ch] (alts! [kill-ch mouse-click-ch select-ch] :priority true)]
                    (condp = ch
-                     mouse-click-ch (let [n (om/get-node owner)]
-                                      (when-not (.contains n (.-target v))
+                     mouse-click-ch (do
+                                      (when (and (om/mounted? owner)
+                                                 (not (.contains (om/get-node owner) (.-target v))))
                                         (om/set-state! owner :expanded false))
                                       (recur))
                      select-ch      (do
@@ -379,6 +382,7 @@
 
     om/IWillUnmount
     (will-unmount [_]
+      (mouse-click-unlisten (om/get-state owner :mouse-listener))
       (put! (om/get-state owner :kill-ch) true))
 
     om/IRenderState
@@ -434,16 +438,18 @@
     (reify
       om/IInitState
       (init-state [_]
-        {:expanded        false
-         :mode            :start
-         :start           (get cursor :start (d/today))
-         :end             (get cursor :end (d/today))
-         :selected-start  (get cursor :start (d/today))
-         :selected-end    (get cursor :end (d/today))
-         :mouse-click-ch  (mouse-click)
-         :month-select-ch (chan (sliding-buffer 1))
-         :select-ch       (chan (sliding-buffer 1))
-         :kill-ch         (chan (sliding-buffer 1))})
+        (let [{mouse-ch :ch mouse-listener :listener-key} (mouse-click-listen)]
+          {:expanded        false
+           :mode            :start
+           :start           (get cursor :start (d/today))
+           :end             (get cursor :end (d/today))
+           :selected-start  (get cursor :start (d/today))
+           :selected-end    (get cursor :end (d/today))
+           :mouse-click-ch  mouse-ch
+           :mouse-listener  mouse-listener
+           :month-select-ch (chan (sliding-buffer 1))
+           :select-ch       (chan (sliding-buffer 1))
+           :kill-ch         (chan (sliding-buffer 1))}))
 
       om/IWillMount
       (will-mount [_]
@@ -459,8 +465,9 @@
                                              (om/set-state! :end   end-date)
                                              (om/set-state! :mode  :start)))
                                          (recur))
-                       mouse-click-ch  (let [n (om/get-node owner)]
-                                         (when-not (.contains n (.-target v))
+                       mouse-click-ch  (do
+                                         (when (and (om/mounted? owner)
+                                                    (not (.contains (om/get-node owner) (.-target v))))
                                            (om/set-state! owner :expanded false))
                                          (recur))
                        select-ch       (let [mode (:mode (om/get-state owner))]
@@ -482,6 +489,7 @@
 
       om/IWillUnmount
       (will-unmount [_]
+        (mouse-click-unlisten (om/get-state owner :mouse-listener))
         (put! (om/get-state owner :kill-ch) true))
 
       om/IRenderState
