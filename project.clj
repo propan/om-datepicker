@@ -22,6 +22,8 @@
   :less
   {:source-paths ["examples/less"]
    :target-path   "examples/public/css"}
+
+  :deploy-repositories [["releases" :clojars {:creds :gpg}]]
   
   :cljsbuild
   {:builds        [{:id           "dev"
